@@ -2,6 +2,7 @@ import { ticketingApi } from '@/lib/axios'
 import type {
   Ticket,
   TicketBrief,
+  TicketComment,
   CreateTicketRequest,
   UpdateStatusRequest,
   AddCommentRequest,
@@ -42,7 +43,7 @@ export const ticketService = {
   },
 
   async addComment(id: number, data: AddCommentRequest): Promise<any> {
-    const res = await ticketingApi.post<Ticket>(`/tickets/${id}/comments`, data)
+    const res = await ticketingApi.post<TicketComment>(`/tickets/${id}/comments`, data)
     return res.data
   },
 

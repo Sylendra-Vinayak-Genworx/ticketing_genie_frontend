@@ -45,7 +45,7 @@ export function SLATimer({ dueAt, createdAt, status, compact = false }: SLATimer
   const [, forceUpdate] = useState(0)
 
   useEffect(() => {
-    const interval = setInterval(() => forceUpdate((n) => n + 1), 60_000)
+    const interval = setInterval(() => forceUpdate((n) => n + 1), 1_000)
     return () => clearInterval(interval)
   }, [])
 
