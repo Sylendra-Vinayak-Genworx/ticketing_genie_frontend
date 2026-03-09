@@ -182,7 +182,11 @@ const ticketsSlice = createSlice({
       .addCase(addCommentThunk.pending, (state) => { state.isSubmitting = true })
       .addCase(addCommentThunk.fulfilled, (state, action) => {
         state.isSubmitting = false
-        state.currentTicket = action.payload
+        // The API returns the new Comment object, not the full Ticket.
+        // Append it to the existing comments array so the page stays intact.
+        if (state.currentTicket) {
+          state.currentTicket.comments = [...state.currentTicket.comments, action.payload]
+        }
       })
       .addCase(addCommentThunk.rejected, (state, action) => {
         state.isSubmitting = false
