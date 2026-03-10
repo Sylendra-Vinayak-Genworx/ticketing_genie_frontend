@@ -167,6 +167,7 @@ export interface Ticket {
   resolution_due_at: string | null
   is_breached: boolean
   is_escalated: boolean
+  escalation_level: number
   hold_started_at: string | null
   total_hold_minutes: number
   resolved_at: string | null
@@ -375,4 +376,3 @@ export interface ApiError {
   detail: string
   status?: number
 }
-

@@ -290,9 +290,9 @@ export default function TicketDetailPage() {
           {/* Tabs */}
           <div className="flex gap-0.5 border-b border-gray-200 overflow-x-auto">
             {[
-              { key: 'conversation', label: 'Conversation', icon: MessageSquare, count: t.comments.length },
               { key: 'details',      label: 'Details',      icon: Info },
               { key: 'timeline',     label: 'Timeline',     icon: History, count: t.events.length },
+              { key: 'conversation', label: 'Conversation', icon: MessageSquare, count: t.comments.length },
             ].map(tab_ => (
               <button
                 key={tab_.key}
@@ -394,9 +394,6 @@ export default function TicketDetailPage() {
                 {[
                   { label: 'Ticket ID',       value: t.ticket_number },
                   { label: 'Source',          value: t.source },
-                  { label: 'Queue Type',      value: t.queue_type },
-                  { label: 'Routing Status',  value: t.routing_status },
-                  { label: 'Product',         value: t.product },
                   { label: 'Environment',     value: t.environment },
                   { label: 'Area of Concern', value: areaName ?? (t.area_of_concern ? `Area ${t.area_of_concern}` : '—') },
                   { label: 'On Hold (mins)',  value: String(t.total_hold_minutes) },
@@ -404,6 +401,7 @@ export default function TicketDetailPage() {
                   { label: 'Customer',        value: customerName ?? `Guest (${t.customer_id.slice(0, 8)})` },
                   { label: 'Created',         value: formatDateTime(t.created_at) },
                   { label: 'Last Updated',    value: formatDateTime(t.updated_at) },
+                  {label:'Description', value: t.description} ,
                   ...(t.resolved_at ? [{ label: 'Resolved At', value: formatDateTime(t.resolved_at) }] : []),
                   ...(t.closed_at   ? [{ label: 'Closed At',   value: formatDateTime(t.closed_at)   }] : []),
                 ].map(({ label, value }) => (
