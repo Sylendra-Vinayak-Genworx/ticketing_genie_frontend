@@ -2,13 +2,14 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Ticket, PlusCircle, Users, BarChart2,
-  Bell, ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
+  ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
   Tag, Shield, ClipboardList, ListOrdered, UsersRound,
 } from 'lucide-react'
 import { cn } from '@/utils'
 import { useAuth } from '@/features/auth'
 import { Avatar } from '@/components/ui/Avatar'
 import { RoleBadge } from '@/components/ui/Badge'
+import { NotificationBell, useSSENotifications } from '@/features/notifications'
 
 const NAV_ITEMS = {
   user: [
@@ -130,10 +131,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </button>
       <div className="flex-1" />
       <div className="flex items-center gap-2">
-        <button className="relative p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        <NotificationBell />
         {user && (
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
             <Avatar name={user.email} size="sm" />
@@ -150,6 +148,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  useSSENotifications()   // open SSE connection for the session
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />

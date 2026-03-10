@@ -13,7 +13,8 @@ const TicketsListPage = lazy(() => import('@/pages/TicketsListPage'))
 const CreateTicketPage= lazy(() => import('@/pages/CreateTicketPage'))
 const TicketDetailPage= lazy(() => import('@/pages/TicketDetailPage'))
 const AnalyticsPage   = lazy(() => import('@/pages/AnalyticsPage'))
-const SLAConfigPage   = lazy(() => import('@/pages/SLAConfigPage'))
+const SLAConfigPage        = lazy(() => import('@/pages/SLAConfigPage'))
+const EscalatedTicketsPage = lazy(() => import('@/pages/Escalatedticketspage'))
 const KeywordRulesPage= lazy(() => import('@/pages/KeywordRulesPage'))
 const UsersPage       = lazy(() => import('@/pages/UsersPage'))
 const TeamsPage       = lazy(() => import('@/pages/TeamsPage'))
@@ -64,7 +65,7 @@ export default function AppRoutes() {
                     <Route path="/tickets"          element={<TicketsListPage />} />
                     <Route path="/tickets/create"   element={<CreateTicketPage />} />
                     <Route path="/tickets/queue"    element={<TicketsListPage />} />
-                    <Route path="/tickets/escalated"element={<TicketsListPage />} />
+                    <Route path="/tickets/escalated" element={<EscalatedTicketsPage />} />
                     <Route path="/tickets/:id"      element={<TicketDetailPage />} />
                     <Route path="/analytics" element={
                       <RoleRoute roles={['team_lead', 'admin']}><AnalyticsPage /></RoleRoute>
