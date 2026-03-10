@@ -63,8 +63,8 @@ export default function TicketsListPage() {
   return (
     <div className="space-y-5">
       <PageHeader
-        title={canSeeAll ? 'All Tickets' : 'My Tickets'}
-        subtitle={`${total} total tickets`}
+        title={role === 'admin' ? 'All Tickets' : role === 'team_lead' ? 'Team Tickets' : 'My Tickets'}
+        subtitle={role === 'team_lead' ? `${total} tickets assigned to your team` : `${total} total tickets`}
         actions={
           <div className="flex items-center gap-2">
             <button onClick={load} className="btn-ghost p-2" title="Refresh">

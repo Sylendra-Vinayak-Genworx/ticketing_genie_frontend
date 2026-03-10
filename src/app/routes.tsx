@@ -74,7 +74,7 @@ export default function AppRoutes() {
                       <RoleRoute roles={['admin']}><AnalyticsPage /></RoleRoute>
                     } />
                     <Route path="/sla-config" element={
-                      <RoleRoute roles={['team_lead', 'admin']}><SLAConfigPage /></RoleRoute>
+                      <RoleRoute roles={['admin']}><SLAConfigPage /></RoleRoute>
                     } />
                     <Route path="/keyword-rules" element={
                       <RoleRoute roles={['team_lead', 'admin']}><KeywordRulesPage /></RoleRoute>

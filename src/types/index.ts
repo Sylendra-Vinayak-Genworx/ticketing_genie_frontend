@@ -194,6 +194,8 @@ export interface TicketBrief {
   is_escalated: boolean
   created_at: string
   updated_at: string
+  escalation_level:string
+  resolution_due_at:string
 }
 
 export interface CreateTicketRequest {

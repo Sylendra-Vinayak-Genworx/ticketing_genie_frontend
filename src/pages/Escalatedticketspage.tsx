@@ -137,12 +137,7 @@ export default function EscalatedTicketsPage() {
     <div className="space-y-5">
       {/* ── Header ── */}
       <PageHeader
-        title={
-          <span className="flex items-center gap-2">
-            <AlertTriangle className="w-5 h-5 text-orange-500" />
-            Escalated Tickets
-          </span>
-        }
+        title=""
         subtitle={`${total} escalated ticket${total !== 1 ? 's' : ''} requiring attention`}
         actions={
           <button onClick={load} className="btn-ghost p-2" title="Refresh">
@@ -316,7 +311,7 @@ export default function EscalatedTicketsPage() {
 
                       {/* Escalation level */}
                       <td className="px-4 py-3">
-                        <EscalationLevelBadge level={ticket.escalation_level ?? 1} />
+                        <EscalationLevelBadge level={parseInt(ticket.escalation_level) ?? 1} />
                       </td>
 
                       {/* Status */}
