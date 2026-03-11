@@ -113,11 +113,13 @@ export type EventType =
 export interface TicketEvent {
   event_id: number
   ticket_id: number
-  triggered_by_user_id: string
+  triggered_by_user_id: string | null   // null = SYSTEM-triggered
   event_type: EventType
   field_name: string | null
   old_value: string | null
   new_value: string | null
+  from_status: string | null            // previous status for STATUS_CHANGED
+  reason: string | null                 // human-readable note
   comment_id: number | null
   created_at: string
 }
@@ -167,7 +169,6 @@ export interface Ticket {
   resolution_due_at: string | null
   is_breached: boolean
   is_escalated: boolean
-  escalation_level: number
   hold_started_at: string | null
   total_hold_minutes: number
   resolved_at: string | null
@@ -194,7 +195,6 @@ export interface TicketBrief {
   is_escalated: boolean
   created_at: string
   updated_at: string
-  escalation_level:string
   resolution_due_at:string
 }
 

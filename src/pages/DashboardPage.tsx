@@ -48,7 +48,8 @@ export default function DashboardPage() {
     }
   }, [role])
 
-  const openCount = list.filter(t => ['NEW', 'OPEN', 'IN_PROGRESS', 'ACKNOWLEDGED'].includes(t.status)).length
+  const openCount = list.filter(t =>t.status === 'OPEN').length
+  const progressCount = list.filter(t =>t.status === 'IN_PROGRESS').length
   const breachedCount = list.filter(t => t.is_breached).length
   const resolvedCount = list.filter(t => t.status === 'RESOLVED').length
   const escalatedCount = list.filter(t => t.is_escalated).length
@@ -72,8 +73,15 @@ export default function DashboardPage() {
           bgColor="bg-blue-50"
         />
         <StatCard
-          label="Open / In Progress"
+          label="Open"
           value={openCount}
+          icon={Clock}
+          color="text-yellow-600"
+          bgColor="bg-yellow-50"
+        />
+        <StatCard
+          label="In Progress"
+          value={progressCount}
           icon={Clock}
           color="text-yellow-600"
           bgColor="bg-yellow-50"
