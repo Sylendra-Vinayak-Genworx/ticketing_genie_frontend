@@ -38,7 +38,7 @@ export interface AuthState {
   error: string | null
 }
 
-// ─── Team Types ───────────────────────────────────────────────────────────────
+
 
 export interface TeamMember {
   id: string
@@ -70,7 +70,7 @@ export interface MemberCreateRequest {
 export interface TeamCreateRequest {
   name: string
   description?: string
-  members: MemberCreateRequest[]  // lead derived from whichever member has role team_lead
+  members: MemberCreateRequest[]  
 }
 
 export interface AddMemberRequest {
@@ -113,13 +113,11 @@ export type EventType =
 export interface TicketEvent {
   event_id: number
   ticket_id: number
-  triggered_by_user_id: string | null   // null = SYSTEM-triggered
+  triggered_by_user_id: string
   event_type: EventType
   field_name: string | null
   old_value: string | null
   new_value: string | null
-  from_status: string | null            // previous status for STATUS_CHANGED
-  reason: string | null                 // human-readable note
   comment_id: number | null
   created_at: string
 }
@@ -169,6 +167,7 @@ export interface Ticket {
   resolution_due_at: string | null
   is_breached: boolean
   is_escalated: boolean
+  escalation_level: number
   hold_started_at: string | null
   total_hold_minutes: number
   resolved_at: string | null
@@ -196,6 +195,7 @@ export interface TicketBrief {
   created_at: string
   updated_at: string
   resolution_due_at:string
+  escalation_level:number
 }
 
 export interface CreateTicketRequest {
@@ -368,11 +368,14 @@ export interface TicketFilterParams extends PaginationParams {
   priority?: Priority
   is_breached?: boolean
   is_escalated?: boolean
+  is_unassigned?: boolean
   customer_id?: string
   assignee_id?: string
+  team_id?: string
+  queue_type?: string
+  routing_status?: string
 }
 
-// ─── API Error ────────────────────────────────────────────────────────────────
 
 export interface ApiError {
   detail: string

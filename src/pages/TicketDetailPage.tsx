@@ -14,10 +14,21 @@ import { Modal, ConfirmModal } from '@/components/ui/Modal'
 import { StatusStepper } from '@/components/common/StatusStepper'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { formatDateTime, formatRelative } from '@/utils'
-import { TICKET_STATUSES } from '@/config/constants'
 import { authService } from '@/features/auth/services/authService'
+import { ticketService } from '@/features/tickets/services/ticketService'
 import toast from 'react-hot-toast'
 import type { TicketStatus, AddCommentRequest, User } from '@/types'
+
+// Which statuses an agent can transition to from each current status
+const ALLOWED_TRANSITIONS: Record<string, TicketStatus[]> = {
+  NEW:          ['ACKNOWLEDGED'],
+  ACKNOWLEDGED: ['OPEN'],
+  OPEN:         ['IN_PROGRESS'],
+  IN_PROGRESS:  ['ON_HOLD', 'RESOLVED'],
+  ON_HOLD:      ['IN_PROGRESS'],
+  RESOLVED:     ['CLOSED'],
+  CLOSED:       ['OPEN'],
+}
 
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
@@ -43,7 +54,6 @@ export default function TicketDetailPage() {
   const [assignModalOpen, setAssignModalOpen] = useState(false)
   const [assigneeId, setAssigneeId]           = useState('')
   const [agents, setAgents]                   = useState<User[]>([])
-  const [userNames, setUserNames]              = useState<Record<string, string>>({})
   const [agentsLoading, setAgentsLoading]     = useState(false)
 
   // Confirm modals
@@ -53,24 +63,40 @@ export default function TicketDetailPage() {
   // Active tab
   const [tab, setTab] = useState<'conversation' | 'details' | 'timeline'>('conversation')
 
+  // Resolved display names
+  const [assigneeName, setAssigneeName] = useState<string | null>(null)
+  const [customerName, setCustomerName] = useState<string | null>(null)
+  const [areaName, setAreaName]         = useState<string | null>(null)
+
   useEffect(() => {
     if (id) fetchById(Number(id))
   }, [id])
 
-  // Resolve UUIDs in events + comments to display names
+  // Resolve display names whenever the ticket changes
   useEffect(() => {
     if (!currentTicket) return
-    const ids = new Set<string>()
-    currentTicket.events.forEach(e => { if (e.triggered_by_user_id) ids.add(e.triggered_by_user_id) })
-    currentTicket.comments.forEach(c => { ids.add(c.author_id) })
-    if (ids.size === 0) return
-    Promise.all(
-      [...ids].map(uid =>
-        authService.getUserById(uid)
-          .then(u => [uid, u.email || uid.slice(0, 8) + '…'] as [string, string])
-          .catch(() => [uid, uid.slice(0, 8) + '…'] as [string, string])
-      )
-    ).then(pairs => setUserNames(Object.fromEntries(pairs)))
+
+    // Area of concern
+    ticketService.getAreasOfConcern()
+      .then(areas => {
+        const match = areas.find(a => a.area_id === Number(currentTicket.area_of_concern))
+        setAreaName(match?.name ?? null)
+      })
+      .catch(() => setAreaName(null))
+
+    // Assignee name
+    if (currentTicket.assignee_id) {
+      authService.getUserById(currentTicket.assignee_id)
+        .then(u => setAssigneeName(u.full_name || u.email))
+        .catch(() => setAssigneeName(`Guest (${currentTicket.assignee_id!.slice(0, 8)})`))
+    } else {
+      setAssigneeName(null)
+    }
+
+    // Customer name
+    authService.getUserById(currentTicket.customer_id)
+      .then(u => setCustomerName(u.full_name || u.email))
+      .catch(() => setCustomerName(`Guest (${currentTicket.customer_id.slice(0, 8)})`))
   }, [currentTicket?.ticket_id])
 
   // When assign modal opens, fetch agents for the current lead
@@ -124,7 +150,7 @@ export default function TicketDetailPage() {
     }
 
     const result = await addComment(currentTicket.ticket_id, data)
-    if ((result as any).payload?.ticket_id) {
+    if ((result as any).payload?.comment_id) {
       toast.success('Comment added')
       setCommentBody('')
       setIsInternal(false)
@@ -172,8 +198,10 @@ export default function TicketDetailPage() {
   }
 
   async function handleReopen() {
+
     if (!currentTicket) return
-    await updateStatus(currentTicket.ticket_id, { new_status: 'REOPENED' })
+    await updateStatus(currentTicket.ticket_id, { new_status: 'OPEN' })
+    
     toast.success('Ticket reopened')
     fetchById(currentTicket.ticket_id)
   }
@@ -218,22 +246,36 @@ export default function TicketDetailPage() {
           <button onClick={() => fetchById(t.ticket_id)} className="btn-ghost p-2" title="Refresh">
             <RefreshCw className="w-4 h-4" />
           </button>
-          {isAgent && (
-            <button onClick={() => { setNewStatus(t.status); setStatusModalOpen(true) }} className="btn-secondary">
+
+          {/* Agents: Change Status for all transitions EXCEPT RESOLVED→CLOSED and CLOSED→OPEN (those belong to the customer) */}
+          {isAgent && (ALLOWED_TRANSITIONS[t.status] ?? []).filter(s => s !== 'CLOSED' && !(t.status === 'CLOSED')).length > 0 && (
+            <button
+              onClick={() => {
+                const options = (ALLOWED_TRANSITIONS[t.status] ?? []).filter(s => s !== 'CLOSED' && !(t.status === 'CLOSED'))
+                setNewStatus(options[0])
+                setStatusModalOpen(true)
+              }}
+              className="btn-secondary"
+            >
               Change Status
             </button>
           )}
+
           {(role === 'team_lead' || role === 'admin') && (
             <button onClick={openAssignModal} className="btn-secondary">
               <UserCheck className="w-4 h-4" /> Assign
             </button>
           )}
-          {t.status === 'RESOLVED' && (
+
+          {/* Customer only: Close when RESOLVED */}
+          {!isAgent && t.status === 'RESOLVED' && (
             <button onClick={() => setCloseConfirm(true)} className="btn-danger">
               <Lock className="w-4 h-4" /> Close
             </button>
           )}
-          {t.status === 'CLOSED' && (
+
+          {/* Customer only: Reopen when CLOSED */}
+          {!isAgent && t.status === 'CLOSED' && (
             <button onClick={() => setReopenConfirm(true)} className="btn-secondary">
               <RefreshCw className="w-4 h-4" /> Reopen
             </button>
@@ -248,9 +290,9 @@ export default function TicketDetailPage() {
           {/* Tabs */}
           <div className="flex gap-0.5 border-b border-gray-200 overflow-x-auto">
             {[
-              { key: 'conversation', label: 'Conversation', icon: MessageSquare, count: t.comments.filter(c => isAgent || !c.is_internal).length },
               { key: 'details',      label: 'Details',      icon: Info },
               { key: 'timeline',     label: 'Timeline',     icon: History, count: t.events.length },
+              { key: 'conversation', label: 'Conversation', icon: MessageSquare, count: t.comments.length },
             ].map(tab_ => (
               <button
                 key={tab_.key}
@@ -280,9 +322,9 @@ export default function TicketDetailPage() {
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{t.description}</p>
               </div>
 
-              {t.comments.filter(c => isAgent || !c.is_internal).length > 0 && (
+              {t.comments.length > 0 && (
                 <div className="space-y-3">
-                  {t.comments.filter(c => isAgent || !c.is_internal).map((comment) => (
+                  {t.comments.map((comment) => (
                     <div
                       key={comment.comment_id}
                       className={`card p-4 ${comment.is_internal ? 'border-yellow-200 bg-yellow-50' : ''}`}
@@ -291,7 +333,7 @@ export default function TicketDetailPage() {
                         <Avatar name={comment.author_id} size="sm" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-gray-900">{userNames[comment.author_id] || comment.author_id.slice(0, 12) + '…'}</span>
+                            <span className="text-sm font-semibold text-gray-900">{comment.author_id.slice(0, 12)}…</span>
                             <span className="text-xs text-gray-400">{comment.author_role.replace('_', ' ')}</span>
                             {comment.is_internal && <span className="badge bg-yellow-100 text-yellow-700">Internal Note</span>}
                             {comment.triggers_hold && <span className="badge bg-gray-100 text-gray-700">⏸ Paused SLA</span>}
@@ -347,21 +389,19 @@ export default function TicketDetailPage() {
 
           {/* Details tab */}
           {tab === 'details' && (
-            <div className="card p-5">
+            <div className="card p-5 space-y-5">
               <dl className="grid grid-cols-2 gap-4 text-sm">
                 {[
                   { label: 'Ticket ID',       value: t.ticket_number },
                   { label: 'Source',          value: t.source },
-                  { label: 'Queue Type',      value: t.queue_type },
-                  { label: 'Routing Status',  value: t.routing_status },
-                  { label: 'Product',         value: t.product },
                   { label: 'Environment',     value: t.environment },
-                  { label: 'Area of Concern', value: String(t.area_of_concern ?? '—') },
+                  { label: 'Area of Concern', value: areaName ?? (t.area_of_concern ? `Area ${t.area_of_concern}` : '—') },
                   { label: 'On Hold (mins)',  value: String(t.total_hold_minutes) },
-                  { label: 'Response Due',    value: formatDateTime(t.response_due_at) },
-                  { label: 'Resolution Due',  value: formatDateTime(t.resolution_due_at) },
+                  { label: 'Assignee',        value: assigneeName ?? (t.assignee_id ? `Guest (${t.assignee_id.slice(0, 8)})` : 'Unassigned') },
+                  { label: 'Customer',        value: customerName ?? `Guest (${t.customer_id.slice(0, 8)})` },
                   { label: 'Created',         value: formatDateTime(t.created_at) },
                   { label: 'Last Updated',    value: formatDateTime(t.updated_at) },
+                  {label:'Description', value: t.description} ,
                   ...(t.resolved_at ? [{ label: 'Resolved At', value: formatDateTime(t.resolved_at) }] : []),
                   ...(t.closed_at   ? [{ label: 'Closed At',   value: formatDateTime(t.closed_at)   }] : []),
                 ].map(({ label, value }) => (
@@ -371,13 +411,25 @@ export default function TicketDetailPage() {
                   </div>
                 ))}
               </dl>
+
+              {/* SLA Timers */}
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Response SLA</p>
+                  <SLATimer dueAt={t.response_due_at} createdAt={t.created_at} status={t.status} />
+                </div>
+                <div>
+                  <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Resolution SLA</p>
+                  <SLATimer dueAt={t.resolution_due_at} createdAt={t.created_at} status={t.status} />
+                </div>
+              </div>
             </div>
           )}
 
           {/* Timeline tab */}
           {tab === 'timeline' && (
             <div className="card p-5">
-              <StatusStepper events={t.events} userNames={userNames} />
+              <StatusStepper events={t.events} />
             </div>
           )}
         </div>
@@ -404,12 +456,16 @@ export default function TicketDetailPage() {
               <div className="flex justify-between">
                 <span className="text-gray-500">Assignee</span>
                 <span className="font-medium text-gray-800">
-                  {t.assignee_id ? t.assignee_id.slice(0, 12) + '…' : 'Unassigned'}
+                  {t.assignee_id
+                    ? (assigneeName ?? `Guest (${t.assignee_id.slice(0, 8)})`)
+                    : 'Unassigned'}
                 </span>
               </div>
               <div className="flex justify-between">
                 <span className="text-gray-500">Customer</span>
-                <span className="font-medium text-gray-800">{t.customer_id.slice(0, 12)}…</span>
+                <span className="font-medium text-gray-800">
+                  {customerName ?? `Guest (${t.customer_id.slice(0, 8)})`}
+                </span>
               </div>
             </div>
           </div>
@@ -446,8 +502,15 @@ export default function TicketDetailPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">New Status</label>
             <select value={newStatus} onChange={(e) => setNewStatus(e.target.value as TicketStatus)} className="input-field">
-              {TICKET_STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+              {(ALLOWED_TRANSITIONS[t.status] ?? [])
+                .filter(s => s !== 'CLOSED' && t.status !== 'CLOSED')
+                .map(s => (
+                  <option key={s} value={s}>{s.replace(/_/g, ' ')}</option>
+                ))}
             </select>
+            {(ALLOWED_TRANSITIONS[t.status] ?? []).length === 0 && (
+              <p className="text-sm text-gray-400 mt-1">No transitions available from current status.</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Reason (optional)</label>

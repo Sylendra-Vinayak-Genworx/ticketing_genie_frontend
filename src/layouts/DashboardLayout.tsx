@@ -2,14 +2,14 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Ticket, PlusCircle, Users, BarChart2,
-  Bell, ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
+  ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
   Tag, Shield, ClipboardList, ListOrdered, UsersRound,
 } from 'lucide-react'
 import { cn } from '@/utils'
 import { useAuth } from '@/features/auth'
 import { Avatar } from '@/components/ui/Avatar'
 import { RoleBadge } from '@/components/ui/Badge'
-import { useSSENotifications, NotificationBell } from '@/features/notifications'
+import { NotificationBell, useSSENotifications } from '@/features/notifications'
 
 const NAV_ITEMS = {
   user: [
@@ -18,25 +18,28 @@ const NAV_ITEMS = {
     { label: 'New Ticket', path: '/tickets/create', icon: PlusCircle },
   ],
   support_agent: [
-    { label: 'Dashboard', path: '/dashboard',       icon: LayoutDashboard },
-    { label: 'My Tickets', path: '/tickets',         icon: Ticket },
-    { label: 'Open Queue', path: '/tickets/queue',   icon: ListOrdered },
+    { label: 'Dashboard',      path: '/dashboard',          icon: LayoutDashboard },
+    { label: 'My Tickets',     path: '/tickets',             icon: Ticket },
+    { label: 'Open Queue',     path: '/tickets/queue',       icon: ListOrdered },
+    { label: 'Escalated',      path: '/tickets/escalated',  icon: AlertTriangle }
   ],
   team_lead: [
-    { label: 'Dashboard',  path: '/dashboard',          icon: LayoutDashboard },
-    { label: 'Team Tickets',path: '/tickets',            icon: Ticket },
-    { label: 'Escalated',  path: '/tickets/escalated',  icon: AlertTriangle },
-    { label: 'Analytics',  path: '/analytics',          icon: BarChart2 },
+    { label: 'Dashboard',        path: '/dashboard',            icon: LayoutDashboard },
+    { label: 'All Tickets',      path: '/tickets',              icon: Ticket },
+    { label: 'Team Tickets',     path: '/tickets/team',         icon: UsersRound },
+    { label: 'Unassigned',       path: '/tickets/unassigned',   icon: ClipboardList },
+    { label: 'Escalated',        path: '/tickets/escalated',    icon: AlertTriangle },
+    { label: 'Analytics',        path: '/analytics',            icon: BarChart2 },
   ],
   admin: [
     { label: 'Dashboard',     path: '/dashboard',         icon: LayoutDashboard },
     { label: 'All Tickets',   path: '/tickets',           icon: Ticket },
+    { label: 'Escalated',     path: '/tickets/escalated', icon: AlertTriangle },
     { label: 'Users',         path: '/users',             icon: Users },
     { label: 'Teams',         path: '/teams',             icon: UsersRound },
     { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
     { label: 'Keyword Rules', path: '/keyword-rules',     icon: Tag },
     { label: 'Analytics',     path: '/analytics',         icon: BarChart2 },
-    { label: 'Reports',       path: '/reports',           icon: ClipboardList },
   ],
 }
 
@@ -146,7 +149,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  useSSENotifications()
+  useSSENotifications()   // open SSE connection for the session
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
