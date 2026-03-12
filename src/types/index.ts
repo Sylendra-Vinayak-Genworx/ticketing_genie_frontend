@@ -10,6 +10,7 @@ export interface User {
   is_active: boolean
   is_verified: boolean
   lead_id: string | null
+  customer_tier_id: number | null
   created_at: string
 }
 
@@ -28,6 +29,13 @@ export interface SignupRequest {
   email: string
   password: string
   role?: UserRole
+}
+
+export interface UserUpdateRequest {
+  full_name?: string
+  is_active?: boolean
+  customer_tier_id?: number | null
+  preferred_mode_of_contact?: 'email' | 'sms'
 }
 
 export interface AuthState {
@@ -194,8 +202,12 @@ export interface TicketBrief {
   is_escalated: boolean
   created_at: string
   updated_at: string
-  resolution_due_at:string
-  escalation_level:number
+  resolution_due_at: string
+  escalation_level: number
+  team_id?: string
+  queue_type?: string
+  routing_status?: string
+  response_due_at?: string
 }
 
 export interface CreateTicketRequest {

@@ -35,7 +35,6 @@ const NAV_ITEMS = {
     { label: 'Dashboard',     path: '/dashboard',         icon: LayoutDashboard },
     { label: 'All Tickets',   path: '/tickets',           icon: Ticket },
     { label: 'Escalated',     path: '/tickets/escalated', icon: AlertTriangle },
-    { label: 'Users',         path: '/users',             icon: Users },
     { label: 'Teams',         path: '/teams',             icon: UsersRound },
     { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
     { label: 'Keyword Rules', path: '/keyword-rules',     icon: Tag },

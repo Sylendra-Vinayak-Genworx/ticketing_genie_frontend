@@ -77,38 +77,7 @@ export default function AnalyticsPage() {
               <span className="text-sm font-bold text-green-600">{formatPercent(sla_compliance.response_compliance_pct)}</span>
             </div>
           </div>
-          <div>      {/* Top Agents */}
-      {top_agents.length > 0 && (
-        <div className="card overflow-hidden">
-          <div className="px-5 py-4 border-b border-gray-100">
-            <h3 className="font-semibold text-gray-900">Top Agents</h3>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-sm">
-              <thead>
-                <tr className="bg-gray-50 border-b border-gray-100">
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Agent</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Assigned</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Resolved</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Breached</th>
-                  <th className="text-right px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Avg Resolution</th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-50">
-                {top_agents.map(agent => (
-                  <tr key={agent.agent_user_id} className="table-row">
-                    <td className="px-4 py-3 font-medium text-gray-900">{agent.display_name}</td>
-                    <td className="px-4 py-3 text-right text-blue-600 font-semibold">{agent.total_assigned}</td>
-                    <td className="px-4 py-3 text-right text-green-600 font-semibold">{agent.total_resolved}</td>
-                    <td className="px-4 py-3 text-right text-red-500">{agent.total_breached}</td>
-                    <td className="px-4 py-3 text-right text-gray-600">{formatMinutes(Math.round(agent.avg_resolution_minutes))}</td>
-                  </tr>
-                ))}
-              </tbody>
-            </table>
-          </div>
-        </div>
-      )}
+          <div>      
             <p className="text-xs text-gray-500 mb-1">Resolution SLA Compliance</p>
             <div className="flex items-center gap-3">
               <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
@@ -179,19 +148,6 @@ export default function AnalyticsPage() {
           </ResponsiveContainer>
         </div>
 
-        {/* By Product */}
-        <div className="card p-5">
-          <h3 className="font-semibold text-gray-900 mb-4">Tickets by Product</h3>
-          <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={productData} margin={{ top: 0, right: 0, left: -20, bottom: 40 }}>
-              <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
-              <XAxis dataKey="name" tick={{ fontSize: 10 }} angle={-30} textAnchor="end" interval={0} />
-              <YAxis tick={{ fontSize: 11 }} />
-              <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
-              <Bar dataKey="value" fill="#8b5cf6" radius={[4, 4, 0, 0]} />
-            </BarChart>
-          </ResponsiveContainer>
-        </div>
       </div>
 
     </div>

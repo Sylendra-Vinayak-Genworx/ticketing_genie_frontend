@@ -51,8 +51,8 @@ function MemberRow({
       {/* Lead indicator */}
       <div className="flex items-center justify-center w-5 h-5 mt-2 flex-shrink-0">
         {isLead
-          ? <Crown className="w-4 h-4 text-yellow-500" title="Team Lead" />
-          : <span className="w-4 h-4" />
+          ? "team lead"
+          : ""
         }
       </div>
 
@@ -103,7 +103,7 @@ function TeamCard({
   allUsers: User[]
   onDelete: (t: Team) => void
   onAddMember: (t: Team) => void
-  onRemoveMember: (t: Team, uid: string, email: string) => void
+  onRemoveMember: (t: Team, uid: string, name: string) => void
 }) {
   const [expanded, setExpanded] = useState(false)
   const lead = allUsers.find((u) => u.id === team.lead_id)
@@ -187,10 +187,7 @@ function TeamCard({
                         )}
                         <Avatar name={m.full_name || m.email} size="sm" />
                         <div className="min-w-0">
-                          <p className="font-medium text-gray-900 truncate">{m.full_name || '—'}</p>
-                          <p className="text-xs text-gray-400 flex items-center gap-1 truncate">
-                            <Mail className="w-3 h-3 flex-shrink-0" />{m.email}
-                          </p>
+                          <p className="font-medium text-gray-900 truncate">{m.full_name || m.email}</p>
                         </div>
                       </div>
                     </td>
@@ -202,7 +199,7 @@ function TeamCard({
                     </td>
                     <td className="px-5 py-3 text-right">
                       <button
-                        onClick={() => onRemoveMember(team, m.id, m.email)}
+                        onClick={() => onRemoveMember(team, m.id, m.full_name || m.email)}
                         className="p-1.5 text-gray-400 hover:text-red-600 hover:bg-red-50 rounded-lg"
                         title="Remove from team"
                       >
@@ -236,7 +233,7 @@ export default function TeamsPage() {
 
   const [deleteTeamTarget, setDeleteTeamTarget]     = useState<Team | null>(null)
   const [removeMemberTarget, setRemoveMemberTarget] = useState<{
-    team: Team; userId: string; email: string
+    team: Team; userId: string; name: string
   } | null>(null)
 
   async function load() {
@@ -365,7 +362,7 @@ export default function TeamsPage() {
     setSubmitting(true)
     try {
       await authService.removeMember(removeMemberTarget.team.id, removeMemberTarget.userId)
-      toast.success(`${removeMemberTarget.email} removed from team`)
+      toast.success(`${removeMemberTarget.name} removed from team`)
       setRemoveMemberTarget(null)
       load()
     } catch {
@@ -412,8 +409,8 @@ export default function TeamsPage() {
               allUsers={allUsers}
               onDelete={setDeleteTeamTarget}
               onAddMember={openAddMember}
-              onRemoveMember={(t, uid, email) =>
-                setRemoveMemberTarget({ team: t, userId: uid, email })
+              onRemoveMember={(t, uid, name) =>
+                setRemoveMemberTarget({ team: t, userId: uid, name })
               }
             />
           ))}
@@ -591,7 +588,7 @@ export default function TeamsPage() {
         onClose={() => setRemoveMemberTarget(null)}
         onConfirm={handleRemoveMember}
         title="Remove Member"
-        message={`Remove ${removeMemberTarget?.email} from the team? Their account will remain active.`}
+        message={`Remove ${removeMemberTarget?.name} from the team? Their account will remain active.`}
         confirmLabel="Remove"
         isLoading={submitting}
         variant="danger"

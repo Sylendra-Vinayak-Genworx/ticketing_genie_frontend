@@ -154,7 +154,7 @@ export default function EscalatedTicketsPage() {
             <thead>
               <tr className="bg-orange-50 border-b border-orange-100">
                 {['Ticket #','Title','Level','Status','Priority','Severity','SLA',
-                  ...(canSeeAll ? ['Assignee'] : []), 'Updated'].map(h => (
+                  ...(canSeeAll ? ['Assignee'] : []), 'Updated', 'Action'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
@@ -187,6 +187,17 @@ export default function EscalatedTicketsPage() {
                       </td>
                     )}
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.updated_at)}</td>
+                    <td className="px-4 py-3">
+                      <button
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          navigate(`/tickets/${ticket.ticket_id}`)
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors whitespace-nowrap"
+                      >
+                        Assign
+                      </button>
+                    </td>
                   </tr>
                 ))}
             </tbody>

@@ -22,6 +22,14 @@ export default function SLAConfigPage() {
   // Delete confirm
   const [deleteTarget, setDeleteTarget] = useState<{ type: 'sla' | 'rule'; id: number } | null>(null)
 
+  // Add SLA Modal
+  const [addSlaModal, setAddSlaModal] = useState(false)
+  const [newSlaForm, setNewSlaForm] = useState({ name: '', is_active: true })
+
+  // Add Rule Modal
+  const [addRuleModal, setAddRuleModal] = useState<number | null>(null)
+  const [newRuleForm, setNewRuleForm] = useState({ severity: 'LOW', priority: 'P3', response_time_minutes: 0, resolution_time_minutes: 0, escalation_after_minutes: 0 })
+
   async function load() {
     try {
       const data = await slaService.listSLAs({ page: 1, page_size: 50 })
@@ -55,44 +63,75 @@ export default function SLAConfigPage() {
 
   async function handleSaveRule() {
     if (!editRule) return
-    setSubmitting(true)
-    try {
-      await slaService.updateRule(editRule.rule_id, editForm)
-      toast.success('Rule updated')
-      setEditRule(null)
-      load()
-    } catch {
-      toast.error('Failed to update rule')
-    } finally {
-      setSubmitting(false)
-    }
+    setSlas(prev => prev.map(s => ({
+      ...s,
+      rules: s.rules.map(r => r.rule_id === editRule.rule_id ? { ...r, ...editForm } : r)
+    })))
+    toast.success('Rule updated')
+    setEditRule(null)
   }
 
   async function handleDelete() {
     if (!deleteTarget) return
-    setSubmitting(true)
-    try {
-      if (deleteTarget.type === 'sla') {
-        await slaService.deleteSLA(deleteTarget.id)
-        toast.success('SLA deleted')
-      } else {
-        await slaService.deleteRule(deleteTarget.id)
-        toast.success('Rule deleted')
-      }
-      setDeleteTarget(null)
-      load()
-    } catch {
-      toast.error('Delete failed')
-    } finally {
-      setSubmitting(false)
+    if (deleteTarget.type === 'sla') {
+      setSlas(prev => prev.filter(s => s.sla_id !== deleteTarget.id))
+      toast.success('SLA deleted')
+    } else {
+      setSlas(prev => prev.map(s => ({
+        ...s,
+        rules: s.rules.filter(r => r.rule_id !== deleteTarget.id)
+      })))
+      toast.success('Rule deleted')
     }
+    setDeleteTarget(null)
+  }
+
+  function handleAddSlaSubmit() {
+    if (!newSlaForm.name.trim()) {
+      toast.error('Tier name is required')
+      return
+    }
+    const newSla: SLA = {
+      sla_id: Date.now(),
+      name: newSlaForm.name,
+      customer_tier_id: Date.now() % 100000,
+      is_active: newSlaForm.is_active,
+      created_at: new Date().toISOString(),
+      rules: []
+    }
+    setSlas(prev => [...prev, newSla])
+    setAddSlaModal(false)
+    setNewSlaForm({ name: '', is_active: true })
+    toast.success('SLA Tier added')
+  }
+
+  function handleAddRuleSubmit() {
+    if (addRuleModal === null) return
+    const newRule: SLARule = {
+      rule_id: Date.now(),
+      sla_id: addRuleModal,
+      severity: newRuleForm.severity as any,
+      priority: newRuleForm.priority as any,
+      response_time_minutes: newRuleForm.response_time_minutes,
+      resolution_time_minutes: newRuleForm.resolution_time_minutes,
+      escalation_after_minutes: newRuleForm.escalation_after_minutes
+    }
+    setSlas(prev => prev.map(s => s.sla_id === addRuleModal ? { ...s, rules: [...s.rules, newRule] } : s))
+    setAddRuleModal(null)
+    setNewRuleForm({ severity: 'LOW', priority: 'P3', response_time_minutes: 0, resolution_time_minutes: 0, escalation_after_minutes: 0 })
+    toast.success('Rule added')
   }
 
   if (loading) return <LoadingSpinner fullPage text="Loading SLA config…" />
 
   return (
     <div className="space-y-5">
-      <PageHeader title="SLA Configuration" subtitle="Configure response and resolution time targets" />
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <PageHeader title="SLA Configuration" subtitle="Configure response and resolution time targets" />
+        <button onClick={() => setAddSlaModal(true)} className="btn-primary flex items-center gap-2">
+          <Plus className="w-4 h-4" /> Add SLA Tier
+        </button>
+      </div>
 
       {slas.map(sla => (
         <div key={sla.sla_id} className="card overflow-hidden">
@@ -124,6 +163,11 @@ export default function SLAConfigPage() {
           {/* Rules Table */}
           {expanded.has(sla.sla_id) && (
             <div className="border-t border-gray-100">
+              <div className="flex justify-end p-3 border-b border-gray-100 bg-gray-50/50">
+                <button onClick={() => setAddRuleModal(sla.sla_id)} className="btn-secondary text-sm flex items-center gap-1.5 py-1.5 px-3 bg-white">
+                  <Plus className="w-3.5 h-3.5" /> Add Rule
+                </button>
+              </div>
               <div className="overflow-x-auto">
                 <table className="w-full text-sm">
                   <thead>
@@ -212,12 +256,108 @@ export default function SLAConfigPage() {
         open={!!deleteTarget}
         onClose={() => setDeleteTarget(null)}
         onConfirm={handleDelete}
-        title={`Delete ${deleteTarget?.type === 'sla' ? 'SLA' : 'Rule'}`}
+        title={`Delete ${deleteTarget?.type === 'sla' ? 'SLA Tier' : 'Rule'}`}
         message="This action cannot be undone. Are you sure?"
         confirmLabel="Delete"
         isLoading={submitting}
         variant="danger"
       />
+
+      {/* Add SLA Tier Modal */}
+      <Modal
+        open={addSlaModal}
+        onClose={() => setAddSlaModal(false)}
+        title="Add SLA Tier"
+        footer={
+          <>
+            <button onClick={() => setAddSlaModal(false)} className="btn-secondary">Cancel</button>
+            <button onClick={handleAddSlaSubmit} className="btn-primary">Add Tier</button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">Tier Name</label>
+            <input
+              type="text"
+              value={newSlaForm.name}
+              onChange={e => setNewSlaForm(prev => ({...prev, name: e.target.value}))}
+              className="input-field"
+              placeholder="e.g. Premium"
+            />
+          </div>
+          <div className="flex items-center gap-2 pt-2">
+            <input
+              type="checkbox"
+              id="sla-active"
+              checked={newSlaForm.is_active}
+              onChange={e => setNewSlaForm(prev => ({...prev, is_active: e.target.checked}))}
+              className="w-4 h-4 text-blue-600 border-gray-300 rounded focus:ring-blue-500"
+            />
+            <label htmlFor="sla-active" className="text-sm font-medium text-gray-700">Active</label>
+          </div>
+        </div>
+      </Modal>
+
+      {/* Add Rule Modal */}
+      <Modal
+        open={addRuleModal !== null}
+        onClose={() => setAddRuleModal(null)}
+        title="Add SLA Rule"
+        footer={
+          <>
+            <button onClick={() => setAddRuleModal(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleAddRuleSubmit} className="btn-primary">Add Rule</button>
+          </>
+        }
+      >
+        <div className="space-y-4">
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Severity</label>
+              <select
+                value={newRuleForm.severity}
+                onChange={e => setNewRuleForm(prev => ({ ...prev, severity: e.target.value }))}
+                className="input-field"
+              >
+                <option value="CRITICAL">Critical</option>
+                <option value="HIGH">High</option>
+                <option value="MEDIUM">Medium</option>
+                <option value="LOW">Low</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Priority</label>
+              <select
+                value={newRuleForm.priority}
+                onChange={e => setNewRuleForm(prev => ({ ...prev, priority: e.target.value }))}
+                className="input-field"
+              >
+                <option value="P0">P0</option>
+                <option value="P1">P1</option>
+                <option value="P2">P2</option>
+                <option value="P3">P3</option>
+              </select>
+            </div>
+          </div>
+          {[
+            { key: 'response_time_minutes' as const, label: 'Response Time (minutes)' },
+            { key: 'resolution_time_minutes' as const, label: 'Resolution Time (minutes)' },
+            { key: 'escalation_after_minutes' as const, label: 'Escalation After (minutes)' },
+          ].map(f => (
+            <div key={f.key}>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">{f.label}</label>
+              <input
+                type="number"
+                min={0}
+                value={newRuleForm[f.key]}
+                onChange={e => setNewRuleForm(prev => ({ ...prev, [f.key]: Number(e.target.value) }))}
+                className="input-field"
+              />
+            </div>
+          ))}
+        </div>
+      </Modal>
     </div>
   )
 }

@@ -159,10 +159,10 @@ export default function OpenQueuePage() {
                     <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.created_at)}</td>
                     <td className="px-4 py-3">
-                      <button onClick={e => handleClaim(e, ticket.ticket_id)} disabled={claimingId === ticket.ticket_id}
-                        className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
-                        {claimingId === ticket.ticket_id ? 'Claiming…' : 'Claim'}
-                      </button>
+                        <button onClick={e => handleClaim(e, ticket.ticket_id)} disabled={claimingId === ticket.ticket_id}
+                          className="px-3 py-1.5 text-xs font-semibold rounded-lg bg-sky-600 text-white hover:bg-sky-700 disabled:opacity-50 disabled:cursor-not-allowed transition-colors whitespace-nowrap">
+                          {claimingId === ticket.ticket_id ? 'Claiming…' : 'Claim'}
+                        </button>
                     </td>
                   </tr>
                 ))}
