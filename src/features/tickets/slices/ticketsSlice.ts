@@ -138,7 +138,7 @@ const ticketsSlice = createSlice({
     },
   },
   extraReducers: (builder) => {
-    const loadingList = (state: TicketsState) => { state.isLoading = true; state.error = null }
+    const loadingList = (state: TicketsState) => { state.isLoading = true; state.error = null; state.list = []; state.total = 0 }
     const failedList = (state: TicketsState, action: any) => {
       state.isLoading = false
       state.error = action.payload

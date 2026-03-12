@@ -1,6 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { AlertTriangle, RefreshCw, Search, ChevronUp, Flame, Clock, Users } from 'lucide-react'
+import { UsersRound, RefreshCw, Search, AlertTriangle, Clock, CheckCircle2, UserCheck } from 'lucide-react'
 import { useAuth } from '@/features/auth'
 import { ticketService } from '@/features/tickets/services/ticketService'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -12,19 +12,7 @@ import { formatRelative } from '@/utils'
 import type { TicketBrief, TicketStatus, Severity, Priority } from '@/types'
 import { TICKET_STATUSES, SEVERITIES, PRIORITIES } from '@/config/constants'
 
-function EscalationLevelBadge({ level }: { level: number }) {
-  const cfg: Record<number, { label: string; classes: string }> = {
-    1: { label: 'L1', classes: 'bg-yellow-100 text-yellow-700 border border-yellow-200' },
-    2: { label: 'L2', classes: 'bg-orange-100 text-orange-700 border border-orange-200' },
-    3: { label: 'L3', classes: 'bg-red-100    text-red-700    border border-red-200'    },
-  }
-  const { label, classes } = cfg[level] ?? { label: `L${level}`, classes: 'bg-red-100 text-red-800 border border-red-300' }
-  return (
-    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded text-xs font-bold ${classes}`}>
-      <ChevronUp className="w-3 h-3" />{label}
-    </span>
-  )
-}
+interface Filters { status: TicketStatus | ''; severity: Severity | ''; priority: Priority | ''; search: string }
 
 function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label: string; value: number; accent: string }) {
   return (
@@ -38,13 +26,10 @@ function StatCard({ icon, label, value, accent }: { icon: React.ReactNode; label
   )
 }
 
-interface Filters { status: TicketStatus | ''; severity: Severity | ''; priority: Priority | ''; search: string }
-
-export default function EscalatedTicketsPage() {
+export default function TeamTicketsPage() {
   const navigate = useNavigate()
   const { user } = useAuth()
-  const role      = user?.role ?? 'support_agent'
-  const canSeeAll = role === 'team_lead' || role === 'admin'
+  const teamId   = (user as any)?.team_id as string | undefined
 
   // ── Fully isolated local state — never touches shared Redux tickets.list ──
   const [tickets,   setTickets]   = useState<TicketBrief[]>([])
@@ -58,24 +43,21 @@ export default function EscalatedTicketsPage() {
     setIsLoading(true)
     setTickets([])   // wipe immediately — no stale flash from previous page
     try {
-      const params = {
-        page, page_size: PAGE_SIZE, is_escalated: true,
+      const res = await ticketService.getAllTickets({
+        page, page_size: PAGE_SIZE,
+        ...(teamId           && { team_id:  teamId           }),
         ...(filters.status   && { status:   filters.status   }),
         ...(filters.severity && { severity: filters.severity }),
         ...(filters.priority && { priority: filters.priority }),
-      }
-      // Agents see only their own escalated tickets; leads/admins see all
-      const res = canSeeAll
-        ? await ticketService.getAllTickets(params)
-        : await ticketService.getMyTickets(params)
+      })
       setTickets(res.items)
       setTotal(res.total)
     } catch (err) {
-      console.error('EscalatedTicketsPage load error', err)
+      console.error('TeamTicketsPage load error', err)
     } finally {
       setIsLoading(false)
     }
-  }, [page, filters.status, filters.severity, filters.priority, canSeeAll])
+  }, [page, filters.status, filters.severity, filters.priority, teamId])
 
   useEffect(() => { load() }, [load])
 
@@ -85,38 +67,30 @@ export default function EscalatedTicketsPage() {
         t.ticket_number.toLowerCase().includes(filters.search.toLowerCase()))
     : tickets
 
-  const criticalCount   = displayed.filter(t => t.severity === 'CRITICAL' || t.severity === 'HIGH').length
-  const breachedCount   = displayed.filter(t => t.is_breached).length
-  const unassignedCount = displayed.filter(t => !t.assignee_id).length
+  const activeCount    = displayed.filter(t => ['OPEN','IN_PROGRESS','ON_HOLD'].includes(t.status)).length
+  const breachedCount  = displayed.filter(t => t.is_breached).length
+  const unclaimedCount = displayed.filter(t => !t.assignee_id).length
+  const resolvedCount  = displayed.filter(t => ['RESOLVED','CLOSED'].includes(t.status)).length
 
   return (
     <div className="space-y-5">
       <PageHeader
-        title={
-          
-            "Escalated Tickets"
-        
-        }
-        subtitle={`${total} escalated ticket${total !== 1 ? 's' : ''} requiring attention`}
+        title={"Team Tickets"}
+        subtitle={`${total} ticket${total !== 1 ? 's' : ''} owned by your team`}
         actions={<button onClick={load} className="btn-ghost p-2" title="Refresh"><RefreshCw className="w-4 h-4" /></button>}
       />
 
-      {total > 0 && (
-        <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-orange-50 border border-orange-200 text-orange-800 text-sm">
-          <AlertTriangle className="w-4 h-4 mt-0.5 shrink-0 text-orange-500" />
-          <span>
-            {canSeeAll
-              ? 'These tickets have been escalated due to SLA breaches and require immediate review or re-assignment.'
-              : 'Your tickets have been escalated. A lead has been notified — add an update or comment to show progress.'}
-          </span>
-        </div>
-      )}
+      <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-violet-50 border border-violet-200 text-violet-800 text-sm">
+        <UsersRound className="w-4 h-4 mt-0.5 shrink-0 text-violet-500" />
+        <span>Tickets routed to <strong>your team's queue</strong>. Unclaimed tickets need an agent to self-claim. Escalated tickets require immediate attention.</span>
+      </div>
 
       {!isLoading && displayed.length > 0 && (
-        <div className="grid grid-cols-3 gap-4">
-          <StatCard icon={<Flame className="w-5 h-5 text-red-500"    />} label="Critical / High" value={criticalCount}   accent="border-red-400"    />
-          <StatCard icon={<Clock className="w-5 h-5 text-orange-500" />} label="SLA breached"    value={breachedCount}   accent="border-orange-400" />
-          <StatCard icon={<Users className="w-5 h-5 text-yellow-500" />} label="Unassigned"      value={unassignedCount} accent="border-yellow-400" />
+        <div className="grid grid-cols-4 gap-4">
+          <StatCard icon={<Clock        className="w-5 h-5 text-blue-500"   />} label="Active"      value={activeCount}    accent="border-blue-400"   />
+          <StatCard icon={<AlertTriangle className="w-5 h-5 text-orange-500"/>} label="SLA breached" value={breachedCount}  accent="border-orange-400" />
+          <StatCard icon={<UserCheck    className="w-5 h-5 text-yellow-500" />} label="Unclaimed"   value={unclaimedCount} accent="border-yellow-400" />
+          <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500"  />} label="Resolved"    value={resolvedCount}  accent="border-green-400"  />
         </div>
       )}
 
@@ -152,62 +126,48 @@ export default function EscalatedTicketsPage() {
         <div className="overflow-x-auto">
           <table className="w-full text-sm">
             <thead>
-              <tr className="bg-orange-50 border-b border-orange-100">
-                {['Ticket #','Title','Level','Status','Priority','Severity','SLA',
-                  ...(canSeeAll ? ['Assignee'] : []), 'Updated', 'Action'].map(h => (
+              <tr className="bg-violet-50 border-b border-violet-100">
+                {['Ticket #','Title','Status','Priority','Severity','SLA','Assignee','Updated'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
               {isLoading
-                ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={canSeeAll ? 9 : 8} />)
+                ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={8} />)
                 : displayed.map(ticket => (
                   <tr key={ticket.ticket_id}
-                    className="table-row cursor-pointer hover:bg-orange-50/40 transition-colors"
+                    className="table-row cursor-pointer hover:bg-violet-50/40 transition-colors"
                     onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}>
                     <td className="px-4 py-3 font-mono text-xs font-semibold whitespace-nowrap">
-                      <span className="text-orange-600">{ticket.ticket_number}</span>
-                      <span className="ml-1.5 text-orange-400" title="Escalated">▲</span>
+                      <span className="text-violet-600">{ticket.ticket_number}</span>
+                      {ticket.is_escalated && <span className="ml-1.5 text-orange-500" title="Escalated">▲</span>}
+                      {ticket.is_breached  && <span className="ml-1 text-red-500"      title="SLA Breached">●</span>}
                     </td>
                     <td className="px-4 py-3 max-w-[240px]">
                       <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{ticket.product} · {ticket.environment}</p>
                     </td>
-                    <td className="px-4 py-3"><EscalationLevelBadge level={ticket.escalation_level ?? 1} /></td>
                     <td className="px-4 py-3"><StatusBadge   status={ticket.status}     /></td>
                     <td className="px-4 py-3"><PriorityBadge priority={ticket.priority} /></td>
                     <td className="px-4 py-3"><SeverityBadge severity={ticket.severity} /></td>
                     <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
-                    {canSeeAll && (
-                      <td className="px-4 py-3 text-xs text-gray-500">
-                        {ticket.assignee_id
-                          ? <span className="font-medium text-gray-700">{ticket.assignee_id.slice(0, 8)}…</span>
-                          : <span className="inline-flex items-center gap-1 text-orange-500 font-medium"><AlertTriangle className="w-3 h-3" />Unassigned</span>}
-                      </td>
-                    )}
-                    <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.updated_at)}</td>
-                    <td className="px-4 py-3">
-                      <button
-                        onClick={(e) => {
-                          e.stopPropagation()
-                          navigate(`/tickets/${ticket.ticket_id}`)
-                        }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded-lg bg-orange-600 text-white hover:bg-orange-700 transition-colors whitespace-nowrap"
-                      >
-                        Assign
-                      </button>
+                    <td className="px-4 py-3 text-xs">
+                      {ticket.assignee_id
+                        ? <span className="font-medium text-gray-700">{ticket.assignee_id.slice(0, 8)}…</span>
+                        : <span className="inline-flex items-center gap-1 text-amber-600 font-medium"><UserCheck className="w-3 h-3" />Unclaimed</span>}
                     </td>
+                    <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.updated_at)}</td>
                   </tr>
                 ))}
             </tbody>
           </table>
         </div>
         {!isLoading && displayed.length === 0 && (
-          <EmptyState icon={<AlertTriangle className="w-12 h-12 text-orange-300" />} title="No escalated tickets"
+          <EmptyState icon={<UsersRound className="w-12 h-12 text-violet-200" />} title="No team tickets"
             description={filters.search || filters.status || filters.severity || filters.priority
-              ? 'No escalated tickets match your current filters'
-              : 'All clear — no tickets have been escalated'} />
+              ? 'No tickets match your current filters'
+              : 'Your team has no active tickets'} />
         )}
         {!isLoading && displayed.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-100">

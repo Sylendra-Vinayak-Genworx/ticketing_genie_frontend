@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react'
-import { Clock, AlertTriangle, CheckCircle } from 'lucide-react'
+import { Clock, AlertTriangle, CheckCircle, MinusCircle } from 'lucide-react'
 import { getSLAStatus, getSLARemaining, getSLAPercent } from '@/utils'
 import { cn } from '@/utils'
 
@@ -17,6 +17,7 @@ const STATUS_STYLES = {
     bg: 'bg-green-50',
     border: 'border-green-200',
     icon: CheckCircle,
+    label: 'SLA Remaining',
   },
   warning: {
     bar: 'bg-yellow-500',
@@ -24,6 +25,7 @@ const STATUS_STYLES = {
     bg: 'bg-yellow-50',
     border: 'border-yellow-200',
     icon: Clock,
+    label: 'SLA Remaining',
   },
   breached: {
     bar: 'bg-red-500',
@@ -31,13 +33,23 @@ const STATUS_STYLES = {
     bg: 'bg-red-50',
     border: 'border-red-200',
     icon: AlertTriangle,
+    label: 'SLA Breached',
   },
-  na: {
-    bar: 'bg-gray-300',
-    text: 'text-gray-500',
+  resolved: {
+    bar: 'bg-green-400',
+    text: 'text-green-700',
+    bg: 'bg-green-50',
+    border: 'border-green-200',
+    icon: CheckCircle,
+    label: 'SLA Resolved',
+  },
+  not_started: {
+    bar: 'bg-gray-200',
+    text: 'text-gray-400',
     bg: 'bg-gray-50',
     border: 'border-gray-200',
-    icon: CheckCircle,
+    icon: MinusCircle,
+    label: 'No SLA',
   },
 }
 
@@ -45,7 +57,7 @@ export function SLATimer({ dueAt, createdAt, status, compact = false }: SLATimer
   const [, forceUpdate] = useState(0)
 
   useEffect(() => {
-    const interval = setInterval(() => forceUpdate((n) => n + 1), 1_000)
+    const interval = setInterval(() => forceUpdate((n) => n + 1), 60_000)
     return () => clearInterval(interval)
   }, [])
 
@@ -57,9 +69,19 @@ export function SLATimer({ dueAt, createdAt, status, compact = false }: SLATimer
 
   if (compact) {
     return (
-      <div className={cn('inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-medium', styles.bg, styles.border, styles.text, slaStatus === 'breached' && 'sla-breached')}>
+      <div
+        className={cn(
+          'inline-flex items-center gap-1.5 px-2 py-1 rounded-lg border text-xs font-medium',
+          styles.bg,
+          styles.border,
+          styles.text,
+          slaStatus === 'breached' && 'sla-breached',
+        )}
+      >
         <Icon className="w-3 h-3" />
-        {slaStatus === 'na' ? 'Resolved' : remaining}
+        {slaStatus === 'resolved' ? 'SLA Resolved'
+          : slaStatus === 'not_started' ? 'No SLA'
+          : remaining}
       </div>
     )
   }
@@ -67,18 +89,31 @@ export function SLATimer({ dueAt, createdAt, status, compact = false }: SLATimer
   return (
     <div className={cn('p-3 rounded-xl border', styles.bg, styles.border)}>
       <div className="flex items-center justify-between mb-2">
-        <div className={cn('flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide', styles.text)}>
+        <div
+          className={cn(
+            'flex items-center gap-1.5 text-xs font-semibold uppercase tracking-wide',
+            styles.text,
+          )}
+        >
           <Icon className="w-3.5 h-3.5" />
-          {slaStatus === 'breached' ? 'SLA Breached' : slaStatus === 'na' ? 'SLA Met' : 'SLA Remaining'}
+          {styles.label}
         </div>
-        <span className={cn('text-sm font-bold', styles.text, slaStatus === 'breached' && 'sla-breached')}>
-          {slaStatus === 'na' ? '✓' : remaining}
+        <span
+          className={cn(
+            'text-sm font-bold',
+            styles.text,
+            slaStatus === 'breached' && 'sla-breached',
+          )}
+        >
+          {slaStatus === 'resolved' ? '✓'
+            : slaStatus === 'not_started' ? '—'
+            : remaining}
         </span>
       </div>
       <div className="h-1.5 bg-white/60 rounded-full overflow-hidden">
         <div
           className={cn('h-full rounded-full transition-all', styles.bar)}
-          style={{ width: `${Math.min(pct, 100)}%` }}
+          style={{ width: `${slaStatus === 'not_started' ? 0 : Math.min(pct, 100)}%` }}
         />
       </div>
     </div>

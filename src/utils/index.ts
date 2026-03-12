@@ -1,4 +1,4 @@
-import { format, formatDistanceToNow, parseISO, isValid, differenceInMinutes, differenceInSeconds } from 'date-fns'
+import { format, formatDistanceToNow, parseISO, isValid, differenceInMinutes } from 'date-fns'
 import { clsx, type ClassValue } from 'clsx'
 
 // ─── Class Names ──────────────────────────────────────────────────────────────
@@ -45,11 +45,12 @@ export function formatRelative(dateStr: string | null | undefined): string {
 export function getSLAStatus(
   dueAt: string | null | undefined,
   status: string
-): 'ok' | 'warning' | 'breached' | 'na' {
-  if (['RESOLVED', 'CLOSED'].includes(status)) return 'na'
-  if (!dueAt) return 'na'
+): 'ok' | 'warning' | 'breached' | 'resolved' | 'not_started' {
+  const isDone = ['RESOLVED', 'CLOSED'].includes(status)
+  if (isDone) return 'resolved'          // always green check — ticket is done
+  if (!dueAt) return 'not_started'       // active ticket, SLA rule not yet applied
   const due = parseISO(dueAt)
-  if (!isValid(due)) return 'na'
+  if (!isValid(due)) return 'not_started'
   const minsRemaining = differenceInMinutes(due, new Date())
   if (minsRemaining < 0) return 'breached'
   if (minsRemaining < 30) return 'warning'
@@ -60,22 +61,16 @@ export function getSLARemaining(dueAt: string | null | undefined): string {
   if (!dueAt) return '—'
   const due = parseISO(dueAt)
   if (!isValid(due)) return '—'
-  const totalSecs = differenceInSeconds(due, new Date())
-  if (totalSecs < 0) {
-    const abs = Math.abs(totalSecs)
-    const h = Math.floor(abs / 3600)
-    const m = Math.floor((abs % 3600) / 60)
-    const s = abs % 60
-    if (h > 0) return `-${h}h ${m}m`
-    if (m > 0) return `-${m}m ${s}s`
-    return `-${s}s`
+  const mins = differenceInMinutes(due, new Date())
+  if (mins < 0) {
+    const absMins = Math.abs(mins)
+    const h = Math.floor(absMins / 60)
+    const m = absMins % 60
+    return h > 0 ? `-${h}h ${m}m` : `-${m}m`
   }
-  const h = Math.floor(totalSecs / 3600)
-  const m = Math.floor((totalSecs % 3600) / 60)
-  const s = totalSecs % 60
-  if (h > 0) return `${h}h ${m}m`
-  if (m > 0) return `${m}m ${s}s`
-  return `${s}s`
+  const h = Math.floor(mins / 60)
+  const m = mins % 60
+  return h > 0 ? `${h}h ${m}m` : `${m}m`
 }
 
 export function getSLAPercent(
@@ -86,8 +81,8 @@ export function getSLAPercent(
   const due = parseISO(dueAt)
   const created = parseISO(createdAt)
   if (!isValid(due) || !isValid(created)) return 0
-  const total = differenceInSeconds(due, created)
-  const elapsed = differenceInSeconds(new Date(), created)
+  const total = differenceInMinutes(due, created)
+  const elapsed = differenceInMinutes(new Date(), created)
   if (total <= 0) return 100
   return Math.min(100, Math.max(0, (elapsed / total) * 100))
 }

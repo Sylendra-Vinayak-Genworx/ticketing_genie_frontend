@@ -1,6 +1,6 @@
 import { authApi } from '@/lib/axios'
 import type {
-  LoginRequest, SignupRequest, AuthTokens, User,
+  LoginRequest, SignupRequest, AuthTokens, User, UserUpdateRequest,
   Team, TeamListResponse, TeamCreateRequest, AddMemberRequest, TeamMember,
 } from '@/types'
 
@@ -74,5 +74,10 @@ export const authService = {
 
   async removeMember(teamId: string, userId: string): Promise<void> {
     await authApi.delete(`/admin/teams/${teamId}/members/${userId}`)
+  },
+
+  async updateUser(userId: string, data: UserUpdateRequest): Promise<User> {
+    const res = await authApi.patch<User>(`/auth/users/${userId}`, data)
+    return res.data
   },
 }

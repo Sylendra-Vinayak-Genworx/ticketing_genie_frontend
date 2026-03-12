@@ -48,7 +48,8 @@ export default function DashboardPage() {
     }
   }, [role])
 
-  const openCount = list.filter(t => ['NEW', 'OPEN', 'IN_PROGRESS', 'ACKNOWLEDGED'].includes(t.status)).length
+  const openCount = list.filter(t => t.status === 'OPEN').length
+  const progressCount = list.filter(t => t.status === 'IN_PROGRESS').length
   const breachedCount = list.filter(t => t.is_breached).length
   const resolvedCount = list.filter(t => t.status === 'RESOLVED').length
   const escalatedCount = list.filter(t => t.is_escalated).length
@@ -61,8 +62,6 @@ export default function DashboardPage() {
         title={`Welcome back${user?.email ? ', ' + user.email.split('@')[0] : ''} 👋`}
         subtitle="Here's what's happening with your tickets today"
       />
-
-      {/* Stats */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         <StatCard
           label="Total Tickets"
@@ -72,8 +71,15 @@ export default function DashboardPage() {
           bgColor="bg-blue-50"
         />
         <StatCard
-          label="Open / In Progress"
+          label="Open"
           value={openCount}
+          icon={Clock}
+          color="text-yellow-600"
+          bgColor="bg-yellow-50"
+        />
+        <StatCard
+          label="In Progress"
+          value={progressCount}
           icon={Clock}
           color="text-yellow-600"
           bgColor="bg-yellow-50"
@@ -92,11 +98,6 @@ export default function DashboardPage() {
           color="text-red-600"
           bgColor="bg-red-50"
         />
-      </div>
-
-      {/* Role-based extra stats */}
-      {(role === 'team_lead' || role === 'admin') && (
-        <div className="grid grid-cols-2 gap-4">
           <StatCard
             label="Escalated"
             value={escalatedCount}
@@ -104,15 +105,29 @@ export default function DashboardPage() {
             color="text-orange-600"
             bgColor="bg-orange-50"
           />
-          <StatCard
-            label="On Hold"
-            value={list.filter(t => t.status === 'ON_HOLD').length}
-            icon={Users}
-            color="text-indigo-600"
-            bgColor="bg-indigo-50"
-          />
-        </div>
-      )}
+        <StatCard
+          label="On Hold"
+          value={list.filter(t => t.status === 'ON_HOLD').length}
+          icon={Users}
+          color="text-indigo-600"
+          bgColor="bg-indigo-50"
+        />
+        <StatCard
+          label="New"
+          value={list.filter(t => t.status === 'NEW').length}
+          icon={Users}
+          color="text-indigo-600"
+          bgColor="bg-indigo-50"
+        />
+        <StatCard
+          label="Acknowledged"
+          value={list.filter(t => t.status === 'ACKNOWLEDGED').length}
+          icon={Users}
+          color="text-indigo-600"
+          bgColor="bg-indigo-50"
+        />
+      </div>
+
 
       {/* Recent Tickets */}
       <div className="card overflow-hidden">

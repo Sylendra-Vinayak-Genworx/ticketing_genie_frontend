@@ -10,6 +10,7 @@ export interface User {
   is_active: boolean
   is_verified: boolean
   lead_id: string | null
+  customer_tier_id: number | null
   created_at: string
 }
 
@@ -30,6 +31,13 @@ export interface SignupRequest {
   role?: UserRole
 }
 
+export interface UserUpdateRequest {
+  full_name?: string
+  is_active?: boolean
+  customer_tier_id?: number | null
+  preferred_mode_of_contact?: 'email' | 'sms'
+}
+
 export interface AuthState {
   user: User | null
   access_token: string | null
@@ -38,7 +46,7 @@ export interface AuthState {
   error: string | null
 }
 
-// ─── Team Types ───────────────────────────────────────────────────────────────
+
 
 export interface TeamMember {
   id: string
@@ -70,7 +78,7 @@ export interface MemberCreateRequest {
 export interface TeamCreateRequest {
   name: string
   description?: string
-  members: MemberCreateRequest[]  // lead derived from whichever member has role team_lead
+  members: MemberCreateRequest[]  
 }
 
 export interface AddMemberRequest {
@@ -194,8 +202,12 @@ export interface TicketBrief {
   is_escalated: boolean
   created_at: string
   updated_at: string
-  escalation_level:string
-  resolution_due_at:string
+  resolution_due_at: string
+  escalation_level: number
+  team_id?: string
+  queue_type?: string
+  routing_status?: string
+  response_due_at?: string
 }
 
 export interface CreateTicketRequest {
@@ -368,11 +380,14 @@ export interface TicketFilterParams extends PaginationParams {
   priority?: Priority
   is_breached?: boolean
   is_escalated?: boolean
+  is_unassigned?: boolean
   customer_id?: string
   assignee_id?: string
+  team_id?: string
+  queue_type?: string
+  routing_status?: string
 }
 
-// ─── API Error ────────────────────────────────────────────────────────────────
 
 export interface ApiError {
   detail: string

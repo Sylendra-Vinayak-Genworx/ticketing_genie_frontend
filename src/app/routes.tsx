@@ -14,7 +14,10 @@ const CreateTicketPage= lazy(() => import('@/pages/CreateTicketPage'))
 const TicketDetailPage= lazy(() => import('@/pages/TicketDetailPage'))
 const AnalyticsPage   = lazy(() => import('@/pages/AnalyticsPage'))
 const SLAConfigPage        = lazy(() => import('@/pages/SLAConfigPage'))
-const EscalatedTicketsPage = lazy(() => import('@/pages/Escalatedticketspage'))
+const EscalatedTicketsPage   = lazy(() => import('@/pages/Escalatedticketspage'))
+const UnassignedTicketsPage  = lazy(() => import('@/pages/UnassignedTicketsPage'))
+const OpenQueuePage          = lazy(() => import('@/pages/OpenQueuePage'))
+const TeamTicketsPage        = lazy(() => import('@/pages/TeamTicketsPage'))
 const KeywordRulesPage= lazy(() => import('@/pages/KeywordRulesPage'))
 const UsersPage       = lazy(() => import('@/pages/UsersPage'))
 const TeamsPage       = lazy(() => import('@/pages/TeamsPage'))
@@ -64,8 +67,16 @@ export default function AppRoutes() {
                     <Route path="/dashboard"        element={<DashboardPage />} />
                     <Route path="/tickets"          element={<TicketsListPage />} />
                     <Route path="/tickets/create"   element={<CreateTicketPage />} />
-                    <Route path="/tickets/queue"    element={<TicketsListPage />} />
-                    <Route path="/tickets/escalated" element={<EscalatedTicketsPage />} />
+                    <Route path="/tickets/queue"    element={
+                      <RoleRoute roles={['support_agent']}><OpenQueuePage /></RoleRoute>
+                    } />
+                    <Route path="/tickets/team"     element={
+                      <RoleRoute roles={['team_lead']}><TeamTicketsPage /></RoleRoute>
+                    } />
+                    <Route path="/tickets/escalated"   element={<EscalatedTicketsPage />} />
+                    <Route path="/tickets/unassigned" element={
+                      <RoleRoute roles={['team_lead', 'admin']}><UnassignedTicketsPage /></RoleRoute>
+                    } />
                     <Route path="/tickets/:id"      element={<TicketDetailPage />} />
                     <Route path="/analytics" element={
                       <RoleRoute roles={['team_lead', 'admin']}><AnalyticsPage /></RoleRoute>
@@ -74,7 +85,7 @@ export default function AppRoutes() {
                       <RoleRoute roles={['admin']}><AnalyticsPage /></RoleRoute>
                     } />
                     <Route path="/sla-config" element={
-                      <RoleRoute roles={['admin']}><SLAConfigPage /></RoleRoute>
+                      <RoleRoute roles={['team_lead', 'admin']}><SLAConfigPage /></RoleRoute>
                     } />
                     <Route path="/keyword-rules" element={
                       <RoleRoute roles={['team_lead', 'admin']}><KeywordRulesPage /></RoleRoute>

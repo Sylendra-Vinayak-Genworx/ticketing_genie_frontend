@@ -2,13 +2,14 @@ import React, { useState } from 'react'
 import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Ticket, PlusCircle, Users, BarChart2,
-  Bell, ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
+  ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
   Tag, Shield, ClipboardList, ListOrdered, UsersRound,
 } from 'lucide-react'
 import { cn } from '@/utils'
 import { useAuth } from '@/features/auth'
 import { Avatar } from '@/components/ui/Avatar'
 import { RoleBadge } from '@/components/ui/Badge'
+import { NotificationBell, useSSENotifications } from '@/features/notifications'
 
 const NAV_ITEMS = {
   user: [
@@ -17,26 +18,27 @@ const NAV_ITEMS = {
     { label: 'New Ticket', path: '/tickets/create', icon: PlusCircle },
   ],
   support_agent: [
-    { label: 'Dashboard', path: '/dashboard',       icon: LayoutDashboard },
-    { label: 'My Tickets', path: '/tickets',         icon: Ticket },
-    { label: 'Open Queue', path: '/tickets/queue',   icon: ListOrdered },
-    { label: 'New Ticket', path: '/tickets/create',  icon: PlusCircle },
+    { label: 'Dashboard',      path: '/dashboard',          icon: LayoutDashboard },
+    { label: 'My Tickets',     path: '/tickets',             icon: Ticket },
+    { label: 'Open Queue',     path: '/tickets/queue',       icon: ListOrdered },
+    { label: 'Escalated',      path: '/tickets/escalated',  icon: AlertTriangle }
   ],
   team_lead: [
-    { label: 'Dashboard',  path: '/dashboard',          icon: LayoutDashboard },
-    { label: 'Team Tickets',path: '/tickets',            icon: Ticket },
-    { label: 'Escalated',  path: '/tickets/escalated',  icon: AlertTriangle },
-    { label: 'Analytics',  path: '/analytics',          icon: BarChart2 },
+    { label: 'Dashboard',        path: '/dashboard',            icon: LayoutDashboard },
+    { label: 'All Tickets',      path: '/tickets',              icon: Ticket },
+    { label: 'Team Tickets',     path: '/tickets/team',         icon: UsersRound },
+    { label: 'Unassigned',       path: '/tickets/unassigned',   icon: ClipboardList },
+    { label: 'Escalated',        path: '/tickets/escalated',    icon: AlertTriangle },
+    { label: 'Analytics',        path: '/analytics',            icon: BarChart2 },
   ],
   admin: [
     { label: 'Dashboard',     path: '/dashboard',         icon: LayoutDashboard },
     { label: 'All Tickets',   path: '/tickets',           icon: Ticket },
-    { label: 'Users',         path: '/users',             icon: Users },
+    { label: 'Escalated',     path: '/tickets/escalated', icon: AlertTriangle },
     { label: 'Teams',         path: '/teams',             icon: UsersRound },
     { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
     { label: 'Keyword Rules', path: '/keyword-rules',     icon: Tag },
     { label: 'Analytics',     path: '/analytics',         icon: BarChart2 },
-    { label: 'Reports',       path: '/reports',           icon: ClipboardList },
   ],
 }
 
@@ -129,10 +131,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       </button>
       <div className="flex-1" />
       <div className="flex items-center gap-2">
-        <button className="relative p-2 rounded-lg text-gray-400 hover:text-gray-600 hover:bg-gray-100 transition-colors">
-          <Bell className="w-5 h-5" />
-          <span className="absolute top-1.5 right-1.5 w-2 h-2 bg-red-500 rounded-full" />
-        </button>
+        <NotificationBell />
         {user && (
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
             <Avatar name={user.email} size="sm" />
@@ -149,6 +148,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
+  useSSENotifications()   // open SSE connection for the session
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
