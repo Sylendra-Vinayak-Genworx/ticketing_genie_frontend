@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Eye, EyeOff, Loader2, Zap } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
+import { loginThunk } from '../slices/authSlice'
 import toast from 'react-hot-toast'
 
 const DEMO_ACCOUNTS = [
@@ -47,9 +48,6 @@ export default function LoginForm() {
       navigate('/dashboard')
     }
   }
-
-  // avoid import cycle — just check action type
-  function loginThunk() { return { type: '' } }
 
   function fillDemo(email: string, password: string) {
     setForm({ email, password })

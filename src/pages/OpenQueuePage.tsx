@@ -156,7 +156,7 @@ export default function OpenQueuePage() {
                     <td className="px-4 py-3"><PriorityBadge priority={ticket.priority} /></td>
                     <td className="px-4 py-3"><SeverityBadge severity={ticket.severity} /></td>
                     <td className="px-4 py-3"><StatusBadge status={ticket.status} /></td>
-                    <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                    <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} isBreached={ticket.is_breached} compact /></td>
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.created_at)}</td>
                     <td className="px-4 py-3">
                         <button onClick={e => handleClaim(e, ticket.ticket_id)} disabled={claimingId === ticket.ticket_id}

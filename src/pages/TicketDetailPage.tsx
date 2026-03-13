@@ -216,6 +216,15 @@ export default function TicketDetailPage() {
 
   const t = currentTicket
 
+  // Type-safe accessors for optional SLA timestamp fields
+  const getInProgressAt = () => {
+    return (t as any).in_progress_at || (t as any).first_response_at || null
+  }
+
+  const getResolvedAt = () => {
+    return (t as any).resolved_at || null
+  }
+
   return (
     <div className="space-y-5">
       {/* Header */}
@@ -241,8 +250,10 @@ export default function TicketDetailPage() {
           </p>
         </div>
 
-        {/* Action buttons */}
+        {/* Action buttons and SLA indicators */}
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
+          {/* SLA Met indicators - shown when ticket is RESOLVED or CLOSED */}
+
           <button onClick={() => fetchById(t.ticket_id)} className="btn-ghost p-2" title="Refresh">
             <RefreshCw className="w-4 h-4" />
           </button>
@@ -393,34 +404,51 @@ export default function TicketDetailPage() {
               <dl className="grid grid-cols-2 gap-4 text-sm">
                 {[
                   { label: 'Ticket ID',       value: t.ticket_number },
-                  { label: 'Source',          value: t.source },
+                  { label: 'Title',           value: t.title },
+                  { label: 'Description',     value: t.description },
+                  { label: 'Source',          value: (t.source as string) === 'ui' ? 'Manual Assignment' : 'Email Assignment' },
                   { label: 'Environment',     value: t.environment },
-                  { label: 'Area of Concern', value: areaName ?? (t.area_of_concern ? `Area ${t.area_of_concern}` : '—') },
-                  { label: 'On Hold (mins)',  value: String(t.total_hold_minutes) },
-                  { label: 'Assignee',        value: assigneeName ?? (t.assignee_id ? `Guest (${t.assignee_id.slice(0, 8)})` : 'Unassigned') },
+                  { label: 'Status',          value: t.status.replace(/_/g, ' ') },
+                  { label: 'Issue Type',      value: areaName ?? (t.area_of_concern ? `Area ${t.area_of_concern}` : '—') },
+                  { label: 'Priority',        value: t.priority },
+                  { label: 'Severity',        value: t.severity },
                   { label: 'Customer',        value: customerName ?? `Guest (${t.customer_id.slice(0, 8)})` },
+                  { label: 'Assignee',        value: assigneeName ?? (t.assignee_id ? `Guest (${t.assignee_id.slice(0, 8)})` : 'Unassigned') },
                   { label: 'Created',         value: formatDateTime(t.created_at) },
-                  { label: 'Last Updated',    value: formatDateTime(t.updated_at) },
-                  {label:'Description', value: t.description} ,
-                  ...(t.resolved_at ? [{ label: 'Resolved At', value: formatDateTime(t.resolved_at) }] : []),
-                  ...(t.closed_at   ? [{ label: 'Closed At',   value: formatDateTime(t.closed_at)   }] : []),
+                  { label: 'Updated',         value: formatDateTime(t.updated_at) },
                 ].map(({ label, value }) => (
-                  <div key={label}>
+                  <div key={label} className={label === 'Description' ? 'col-span-2' : ''}>
                     <dt className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</dt>
-                    <dd className="text-gray-800 font-medium">{value}</dd>
+                    <dd className={`text-gray-800 font-medium ${label === 'Description' ? 'whitespace-pre-wrap' : ''}`}>{value}</dd>
                   </div>
                 ))}
               </dl>
 
-              {/* SLA Timers */}
+              {/* SLA Status */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Response SLA</p>
-                  <SLATimer dueAt={t.response_due_at} createdAt={t.created_at} status={t.status} />
+                  <SLATimer 
+                    dueAt={t.response_due_at} 
+                    createdAt={t.created_at} 
+                    status={t.status} 
+                    label="Response SLA Met"
+                    slaType="response"
+                    firstResponseAt={getInProgressAt()}
+                    isBreached={t.is_breached}
+                  />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Resolution SLA</p>
-                  <SLATimer dueAt={t.resolution_due_at} createdAt={t.created_at} status={t.status} />
+                  <SLATimer 
+                    dueAt={t.resolution_due_at} 
+                    createdAt={t.created_at} 
+                    status={t.status} 
+                    label="Resolution SLA Met"
+                    slaType="resolution"
+                    resolvedAt={getResolvedAt()}
+                    isBreached={t.is_breached}
+                  />
                 </div>
               </div>
             </div>
@@ -436,40 +464,6 @@ export default function TicketDetailPage() {
 
         {/* Right Sidebar */}
         <div className="space-y-4">
-          <SLATimer dueAt={t.resolution_due_at} createdAt={t.created_at} status={t.status} />
-
-          <div className="card p-4 space-y-3 text-sm">
-            <h3 className="font-semibold text-gray-900 text-sm">Ticket Info</h3>
-            <div className="space-y-2.5">
-              <div className="flex justify-between">
-                <span className="text-gray-500">Status</span>
-                <StatusBadge status={t.status} />
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Priority</span>
-                <PriorityBadge priority={t.priority} />
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Severity</span>
-                <SeverityBadge severity={t.severity} />
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Assignee</span>
-                <span className="font-medium text-gray-800">
-                  {t.assignee_id
-                    ? (assigneeName ?? `Guest (${t.assignee_id.slice(0, 8)})`)
-                    : 'Unassigned'}
-                </span>
-              </div>
-              <div className="flex justify-between">
-                <span className="text-gray-500">Customer</span>
-                <span className="font-medium text-gray-800">
-                  {customerName ?? `Guest (${t.customer_id.slice(0, 8)})`}
-                </span>
-              </div>
-            </div>
-          </div>
-
           {t.attachments.length > 0 && (
             <div className="card p-4 space-y-2 text-sm">
               <h3 className="font-semibold text-gray-900">Attachments ({t.attachments.length})</h3>
