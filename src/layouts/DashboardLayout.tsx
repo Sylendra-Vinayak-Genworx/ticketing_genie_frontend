@@ -21,20 +21,15 @@ const NAV_ITEMS = {
     { label: 'Dashboard',      path: '/dashboard',          icon: LayoutDashboard },
     { label: 'My Tickets',     path: '/tickets',             icon: Ticket },
     { label: 'Open Queue',     path: '/tickets/queue',       icon: ListOrdered },
-    { label: 'Escalated',      path: '/tickets/escalated',  icon: AlertTriangle }
   ],
   team_lead: [
     { label: 'Dashboard',        path: '/dashboard',            icon: LayoutDashboard },
-    { label: 'All Tickets',      path: '/tickets',              icon: Ticket },
     { label: 'Team Tickets',     path: '/tickets/team',         icon: UsersRound },
-    { label: 'Unassigned',       path: '/tickets/unassigned',   icon: ClipboardList },
-    { label: 'Escalated',        path: '/tickets/escalated',    icon: AlertTriangle },
     { label: 'Analytics',        path: '/analytics',            icon: BarChart2 },
   ],
   admin: [
     { label: 'Dashboard',     path: '/dashboard',         icon: LayoutDashboard },
     { label: 'All Tickets',   path: '/tickets',           icon: Ticket },
-    { label: 'Escalated',     path: '/tickets/escalated', icon: AlertTriangle },
     { label: 'Teams',         path: '/teams',             icon: UsersRound },
     { label: 'Users',         path: '/users',             icon: Users },
     { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
