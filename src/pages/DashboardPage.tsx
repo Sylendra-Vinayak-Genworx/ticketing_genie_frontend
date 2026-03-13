@@ -128,6 +128,40 @@ export default function DashboardPage() {
         />
       </div>
 
+      {/* Admin Quick Links */}
+      {role === 'admin' && (
+        <div className="card overflow-hidden">
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
+            <h2 className="font-semibold text-gray-900">Admin Quick Links</h2>
+          </div>
+          <div className="p-5 grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => navigate('/users')}
+              className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-blue-500 hover:bg-blue-50 transition-colors text-left"
+            >
+              <div className="p-3 rounded-lg bg-blue-100 text-blue-600">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">User Management</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Manage agents, leads, and customer tiers</p>
+              </div>
+            </button>
+            <button
+              onClick={() => navigate('/teams')}
+              className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-indigo-500 hover:bg-indigo-50 transition-colors text-left"
+            >
+              <div className="p-3 rounded-lg bg-indigo-100 text-indigo-600">
+                <Users className="w-5 h-5" />
+              </div>
+              <div>
+                <h3 className="font-medium text-gray-900">Team Management</h3>
+                <p className="text-sm text-gray-500 mt-0.5">Configure support teams and assignments</p>
+              </div>
+            </button>
+          </div>
+        </div>
+      )}
 
       {/* Recent Tickets */}
       <div className="card overflow-hidden">

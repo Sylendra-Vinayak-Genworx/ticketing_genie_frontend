@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { Search, Users, Pencil, Loader2 } from 'lucide-react'
 import { authService } from '@/features/auth/services/authService'
-import { tierService, CustomerTier } from '@/features/tickets/services/tierService'
 import { PageHeader } from '@/components/common/PageHeader'
 import { LoadingSpinner, EmptyState } from '@/components/common/LoadingSpinner'
 import { Avatar } from '@/components/ui/Avatar'
@@ -11,13 +10,14 @@ import { formatDate } from '@/utils'
 import toast from 'react-hot-toast'
 import type { User, UserUpdateRequest } from '@/types'
 
+const STAFF_ROLES = ['admin', 'team_lead', 'support_agent']
+
 export default function UsersPage() {
   const [users, setUsers] = useState<User[]>([])
-  const [tiers, setTiers] = useState<CustomerTier[]>([])
   const [loading, setLoading] = useState(true)
   const [search, setSearch] = useState('')
 
-  // Edit Modal State
+
   const [editingUser, setEditingUser] = useState<User | null>(null)
   const [editForm, setEditForm] = useState<UserUpdateRequest>({})
   const [saving, setSaving] = useState(false)
@@ -25,12 +25,8 @@ export default function UsersPage() {
   async function loadData() {
     setLoading(true)
     try {
-      const [allUsers, allTiers] = await Promise.all([
-        authService.getAllUsers(),
-        tierService.listTiers()
-      ])
-      setUsers(allUsers)
-      setTiers(allTiers)
+      const allUsers = await authService.getAllUsers()
+      setUsers(allUsers.filter(u => STAFF_ROLES.includes(u.role)))
     } catch (err) {
       toast.error('Failed to load user data')
     } finally {
@@ -73,7 +69,7 @@ export default function UsersPage() {
 
   return (
     <div className="space-y-5">
-      <PageHeader title="User Management" subtitle="Manage user profiles and customer tier assignments" />
+      <PageHeader title="User Management" subtitle="Manage team leads and support agent profiles" />
 
       <div className="card p-4">
         <div className="relative max-w-sm">
@@ -104,7 +100,6 @@ export default function UsersPage() {
                 <tr className="bg-gray-50 border-b border-gray-100">
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">User</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Role</th>
-                  <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Tier</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Status</th>
                   <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase">Created</th>
                   <th className="px-4 py-3" />
@@ -123,15 +118,6 @@ export default function UsersPage() {
                       </div>
                     </td>
                     <td className="px-4 py-3"><RoleBadge role={u.role} /></td>
-                    <td className="px-4 py-3">
-                      {u.customer_tier_id ? (
-                        <span className="text-gray-900 font-medium">
-                          {tiers.find(t => t.tier_id === u.customer_tier_id)?.name || `Tier ${u.customer_tier_id}`}
-                        </span>
-                      ) : (
-                        <span className="text-gray-400">None</span>
-                      )}
-                    </td>
                     <td className="px-4 py-3">
                       <span className={`badge ${u.is_active ? 'bg-green-100 text-green-700' : 'bg-red-100 text-red-700'}`}>
                         {u.is_active ? 'Active' : 'Inactive'}
@@ -185,21 +171,6 @@ export default function UsersPage() {
                 className="input-field"
                 placeholder="Enter full name"
               />
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1">Customer Tier</label>
-              <select
-                value={editForm.customer_tier_id || ''}
-                onChange={(e) => setEditForm(prev => ({ ...prev, customer_tier_id: e.target.value ? Number(e.target.value) : null }))}
-                className="input-field"
-              >
-                <option value="">No Tier assigned</option>
-                {tiers.map(t => (
-                  <option key={t.tier_id} value={t.tier_id}>{t.name}</option>
-                ))}
-              </select>
-              <p className="mt-1 text-xs text-gray-400">Assignment determines SLA targets for this customer's tickets.</p>
             </div>
 
             <div className="flex items-center gap-2 pt-2">

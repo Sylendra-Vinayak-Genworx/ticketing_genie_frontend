@@ -46,8 +46,8 @@ function deduplicateEvents(events: TicketEvent[]): TicketEvent[] {
         event_type: 'CREATED' as any,
         old_value: null,
         new_value: 'ACKNOWLEDGED',
-        reason: 'Ticket created and acknowledged',
-      })
+        ...({ reason: 'Ticket created and acknowledged' }),
+      } as any)
       i += 2
       continue
     }
@@ -177,9 +177,9 @@ export function StatusStepper({ events, userNames = {} }: StatusStepperProps) {
                     </p>
 
                     {/* Reason / note — only show if meaningful */}
-                    {event.reason && event.reason !== 'Ticket created' && event.reason !== 'Automatic acknowledgement on creation' && (
+                    {(event as any).reason && (event as any).reason !== 'Ticket created' && (event as any).reason !== 'Automatic acknowledgement on creation' && (
                       <p className="text-xs text-gray-400 mt-0.5 italic">
-                        "{event.reason}"
+                        "{(event as any).reason}"
                       </p>
                     )}
                   </div>

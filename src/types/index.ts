@@ -38,6 +38,17 @@ export interface UserUpdateRequest {
   preferred_mode_of_contact?: 'email' | 'sms'
 }
 
+export interface UserCreateRequest {
+  email: string
+  full_name: string
+  role: UserRole
+}
+
+export interface UserCreateResponse {
+  user: User
+  temporary_password: string
+}
+
 export interface AuthState {
   user: User | null
   access_token: string | null
@@ -69,23 +80,34 @@ export interface TeamListResponse {
   teams: Team[]
 }
 
-export interface MemberCreateRequest {
-  email: string
-  full_name: string
-  role: UserRole
-}
-
 export interface TeamCreateRequest {
   name: string
   description?: string
-  members: MemberCreateRequest[]  
+  lead_id: string
+  member_ids: string[]
 }
 
 export interface AddMemberRequest {
-  email: string
-  full_name: string
-  role: UserRole
+  user_id: string
 }
+
+export interface AgentSkill {
+  area_id: number
+  area_name: string
+  proficiency_level: string
+}
+
+export interface AgentSkillUpdateRequest {
+  skills: {
+    area_id: number
+    proficiency_level: string
+  }[]
+}
+
+export interface AgentSkillListResponse {
+  skills: AgentSkill[]
+}
+
 
 // ─── Ticket Types ─────────────────────────────────────────────────────────────
 
@@ -171,8 +193,8 @@ export interface Ticket {
   routing_status: RoutingStatus
   sla_id: number | null
   customer_tier_id: number | null
-  response_due_at: string | null
-  resolution_due_at: string | null
+  response_due_at: string 
+  resolution_due_at: string 
   is_breached: boolean
   is_escalated: boolean
   escalation_level: number

@@ -70,7 +70,7 @@ export default function AppRoutes() {
                     <Route path="/tickets/queue"    element={
                       <RoleRoute roles={['support_agent']}><OpenQueuePage /></RoleRoute>
                     } />
-                    <Route path="/tickets/team"     element={
+                    <Route path="/ticketsMy Tickets/team"     element={
                       <RoleRoute roles={['team_lead']}><TeamTicketsPage /></RoleRoute>
                     } />
                     <Route path="/tickets/escalated"   element={<EscalatedTicketsPage />} />

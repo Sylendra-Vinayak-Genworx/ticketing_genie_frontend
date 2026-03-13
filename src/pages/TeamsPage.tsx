@@ -10,88 +10,13 @@ import { Modal, ConfirmModal } from '@/components/ui/Modal'
 import { Avatar } from '@/components/ui/Avatar'
 import { RoleBadge } from '@/components/ui/Badge'
 import toast from 'react-hot-toast'
-import type { Team, User, UserRole, MemberCreateRequest } from '@/types'
-
-const MEMBER_ROLES: { value: UserRole; label: string }[] = [
-  { value: 'support_agent', label: 'Support Agent' },
-  { value: 'team_lead',     label: 'Team Lead' },
-]
-
-const EMPTY_MEMBER: MemberCreateRequest = {
-  email: '',
-  full_name: '',
-  role: 'support_agent',
-}
+import type { Team, User } from '@/types'
 
 const EMPTY_TEAM_FORM = {
   name: '',
   description: '',
-  members: [{ ...EMPTY_MEMBER }] as MemberCreateRequest[],
-}
-
-// ─── Member Row ───────────────────────────────────────────────────────────────
-
-function MemberRow({
-  member,
-  index,
-  isLead,
-  onChange,
-  onRemove,
-  canRemove,
-}: {
-  member: MemberCreateRequest
-  index: number
-  isLead: boolean
-  onChange: (i: number, field: keyof MemberCreateRequest, value: string) => void
-  onRemove: (i: number) => void
-  canRemove: boolean
-}) {
-  return (
-    <div className={`flex items-start gap-2 p-3 rounded-lg ${isLead ? 'bg-yellow-50 border border-yellow-200' : 'bg-gray-50'}`}>
-      {/* Lead indicator */}
-      <div className="flex items-center justify-center w-5 h-5 mt-2 flex-shrink-0">
-        {isLead
-          ? "team lead"
-          : ""
-        }
-      </div>
-
-      <div className="grid grid-cols-3 gap-2 flex-1">
-        <input
-          type="email"
-          placeholder="Email *"
-          value={member.email}
-          onChange={(e) => onChange(index, 'email', e.target.value)}
-          className="input-field text-xs"
-        />
-        <input
-          type="text"
-          placeholder="Full name *"
-          value={member.full_name}
-          onChange={(e) => onChange(index, 'full_name', e.target.value)}
-          className="input-field text-xs"
-        />
-        <select
-          value={member.role}
-          onChange={(e) => onChange(index, 'role', e.target.value)}
-          className="input-field text-xs"
-        >
-          {MEMBER_ROLES.map((r) => (
-            <option key={r.value} value={r.value}>{r.label}</option>
-          ))}
-        </select>
-      </div>
-
-      <button
-        onClick={() => onRemove(index)}
-        disabled={!canRemove}
-        className="p-1.5 text-gray-400 hover:text-red-500 hover:bg-red-50 rounded-lg mt-0.5 flex-shrink-0 disabled:opacity-30 disabled:cursor-not-allowed"
-        title={canRemove ? 'Remove row' : 'At least one member required'}
-      >
-        <UserMinus className="w-4 h-4" />
-      </button>
-    </div>
-  )
+  lead_id: '',
+  member_ids: [] as string[],
 }
 
 // ─── Team Card ────────────────────────────────────────────────────────────────
@@ -229,7 +154,7 @@ export default function TeamsPage() {
   const [teamForm, setTeamForm]     = useState(EMPTY_TEAM_FORM)
 
   const [addMemberTarget, setAddMemberTarget] = useState<Team | null>(null)
-  const [memberForm, setMemberForm]           = useState<MemberCreateRequest>({ ...EMPTY_MEMBER })
+  const [memberForm, setMemberForm]           = useState<{user_id: string}>({ user_id: '' })
 
   const [deleteTeamTarget, setDeleteTeamTarget]     = useState<Team | null>(null)
   const [removeMemberTarget, setRemoveMemberTarget] = useState<{
@@ -255,28 +180,23 @@ export default function TeamsPage() {
   useEffect(() => { load() }, [])
 
   // ── Derived ────────────────────────────────────────────────────────────────
-  const leadCount = teamForm.members.filter((m) => m.role === 'team_lead').length
+  const eligibleUsers = allUsers.filter(u => u.role === 'support_agent' || u.role === 'team_lead')
 
   // ── Create team ────────────────────────────────────────────────────────────
   function openCreate() {
-    setTeamForm({ ...EMPTY_TEAM_FORM, members: [{ ...EMPTY_MEMBER }] })
+    setTeamForm({ ...EMPTY_TEAM_FORM })
     setCreateOpen(true)
   }
 
-  function updateMember(i: number, field: keyof MemberCreateRequest, value: string) {
-    setTeamForm((f) => {
-      const members = [...f.members]
-      members[i] = { ...members[i], [field]: value }
-      return { ...f, members }
+  function toggleMemberSelection(userId: string) {
+    setTeamForm(f => {
+      const isSelected = f.member_ids.includes(userId)
+      if (isSelected) {
+        return { ...f, member_ids: f.member_ids.filter(id => id !== userId) }
+      } else {
+        return { ...f, member_ids: [...f.member_ids, userId] }
+      }
     })
-  }
-
-  function addRow() {
-    setTeamForm((f) => ({ ...f, members: [...f.members, { ...EMPTY_MEMBER }] }))
-  }
-
-  function removeRow(i: number) {
-    setTeamForm((f) => ({ ...f, members: f.members.filter((_, idx) => idx !== i) }))
   }
 
   async function handleCreateTeam() {
@@ -284,19 +204,9 @@ export default function TeamsPage() {
       toast.error('Team name is required')
       return
     }
-    if (leadCount === 0) {
-      toast.error('At least one member must have the Team Lead role')
+    if (!teamForm.lead_id) {
+      toast.error('A Team Lead must be selected')
       return
-    }
-    if (leadCount > 1) {
-      toast.error('Only one member can be the Team Lead')
-      return
-    }
-    for (const m of teamForm.members) {
-      if (!m.email.trim() || !m.full_name.trim()) {
-        toast.error('All member rows require email and full name')
-        return
-      }
     }
 
     setSubmitting(true)
@@ -304,9 +214,10 @@ export default function TeamsPage() {
       await authService.createTeam({
         name: teamForm.name.trim(),
         description: teamForm.description.trim() || undefined,
-        members: teamForm.members,
+        lead_id: teamForm.lead_id,
+        member_ids: Array.from(new Set([...teamForm.member_ids, teamForm.lead_id])),
       })
-      toast.success(`Team "${teamForm.name}" created — invite emails sent`)
+      toast.success(`Team "${teamForm.name}" created`)
       setCreateOpen(false)
       load()
     } catch (err: any) {
@@ -319,19 +230,19 @@ export default function TeamsPage() {
   // ── Add member ─────────────────────────────────────────────────────────────
   function openAddMember(team: Team) {
     setAddMemberTarget(team)
-    setMemberForm({ ...EMPTY_MEMBER })
+    setMemberForm({ user_id: '' })
   }
 
   async function handleAddMember() {
     if (!addMemberTarget) return
-    if (!memberForm.email.trim() || !memberForm.full_name.trim()) {
-      toast.error('Email and full name are required')
+    if (!memberForm.user_id) {
+      toast.error('Please select a user')
       return
     }
     setSubmitting(true)
     try {
       await authService.addMember(addMemberTarget.id, memberForm)
-      toast.success(`${memberForm.full_name} added — invite email sent`)
+      toast.success('Member added to team')
       setAddMemberTarget(null)
       load()
     } catch (err: any) {
@@ -462,47 +373,50 @@ export default function TeamsPage() {
             </div>
           </div>
 
-          {/* Members */}
+          {/* Member Selection */}
           <div>
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <label className="text-sm font-medium text-gray-700">
-                  Members <span className="text-red-500">*</span>
-                </label>
-                <p className="text-xs text-gray-400 mt-0.5">
-                  Set one member's role to <strong>Team Lead</strong> — that person becomes the team lead.
-                  Everyone gets an invite email with a temporary password.
-                </p>
-              </div>
-              <button onClick={addRow} className="btn-ghost text-xs px-2.5 py-1 flex-shrink-0">
-                <UserPlus className="w-3.5 h-3.5" /> Add Row
-              </button>
+            <div className="mb-2">
+              <label className="text-sm font-medium text-gray-700">
+                Team Lead <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={teamForm.lead_id}
+                onChange={(e) => setTeamForm(f => ({ ...f, lead_id: e.target.value }))}
+                className="input-field mt-1"
+              >
+                <option value="">Select a lead...</option>
+                {eligibleUsers.map(u => (
+                  <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                ))}
+              </select>
             </div>
 
-            {/* Validation hint */}
-            {leadCount === 0 && teamForm.members.length > 0 && (
-              <p className="text-xs text-amber-600 mb-2 flex items-center gap-1">
-                <Crown className="w-3.5 h-3.5" /> Select Team Lead role for at least one member.
+            <div>
+              <label className="text-sm font-medium text-gray-700">Team Members</label>
+              <p className="text-xs text-gray-400 mt-0.5 mb-2">
+                Select agents to add to the team. The selected lead will be added automatically.
               </p>
-            )}
-            {leadCount > 1 && (
-              <p className="text-xs text-red-500 mb-2 flex items-center gap-1">
-                <Crown className="w-3.5 h-3.5" /> Only one member can be Team Lead.
-              </p>
-            )}
-
-            <div className="space-y-2 max-h-64 overflow-y-auto pr-1">
-              {teamForm.members.map((m, i) => (
-                <MemberRow
-                  key={i}
-                  member={m}
-                  index={i}
-                  isLead={m.role === 'team_lead'}
-                  onChange={updateMember}
-                  onRemove={removeRow}
-                  canRemove={teamForm.members.length > 1}
-                />
-              ))}
+              
+              <div className="space-y-2 max-h-64 overflow-y-auto pr-1 border border-gray-100 rounded-lg p-2 bg-gray-50/50">
+                {eligibleUsers.filter(u => u.id !== teamForm.lead_id).map((u) => (
+                  <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors">
+                    <input
+                      type="checkbox"
+                      checked={teamForm.member_ids.includes(u.id)}
+                      onChange={() => toggleMemberSelection(u.id)}
+                      className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                    />
+                    <div className="flex items-center gap-2">
+                      <Avatar name={u.full_name || u.email} size="sm" />
+                      <div className="text-sm font-medium text-gray-900">{u.full_name || u.email}</div>
+                      <RoleBadge role={u.role} />
+                    </div>
+                  </label>
+                ))}
+                {eligibleUsers.filter(u => u.id !== teamForm.lead_id).length === 0 && (
+                  <div className="text-sm text-gray-500 text-center py-4">No other agents available.</div>
+                )}
+              </div>
             </div>
           </div>
         </div>
@@ -529,43 +443,24 @@ export default function TeamsPage() {
         <div className="space-y-4">
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Email <span className="text-red-500">*</span>
+              Select Agent <span className="text-red-500">*</span>
             </label>
-            <input
-              type="email"
-              value={memberForm.email}
-              onChange={(e) => setMemberForm((f) => ({ ...f, email: e.target.value }))}
-              className="input-field"
-              placeholder="agent@company.com"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">
-              Full Name <span className="text-red-500">*</span>
-            </label>
-            <input
-              type="text"
-              value={memberForm.full_name}
-              onChange={(e) => setMemberForm((f) => ({ ...f, full_name: e.target.value }))}
-              className="input-field"
-              placeholder="Jane Doe"
-            />
-          </div>
-          <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
             <select
-              value={memberForm.role}
-              onChange={(e) => setMemberForm((f) => ({ ...f, role: e.target.value as UserRole }))}
-              className="input-field"
+              value={memberForm.user_id}
+              onChange={(e) => setMemberForm({ user_id: e.target.value })}
+              className="input-field mt-1"
             >
-              {MEMBER_ROLES.map((r) => (
-                <option key={r.value} value={r.value}>{r.label}</option>
-              ))}
+              <option value="">Choose an agent...</option>
+              {allUsers
+                .filter(u => (u.role === 'support_agent' || u.role === 'team_lead') && !addMemberTarget?.members.find(m => m.id === u.id))
+                .map(u => (
+                  <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                ))}
             </select>
           </div>
           <p className="text-xs text-gray-400 flex items-center gap-1.5">
             <Mail className="w-3.5 h-3.5" />
-            An invite email with a temporary password will be sent automatically.
+            The agent will be assigned to <strong>{addMemberTarget?.name}</strong>.
           </p>
         </div>
       </Modal>
