@@ -18,12 +18,12 @@ export function useTeamTickets() {
   const { user } = useAuth()
   const teamId = (user as any)?.team_id as string | undefined
 
-  const [tickets, setTickets] = useState<TicketBrief[]>([])
-  const [total, setTotal] = useState(0)
-  const [page, setPage] = useState(1)
+  const [tickets, setTickets]     = useState<TicketBrief[]>([])
+  const [total, setTotal]         = useState(0)
+  const [page, setPage]           = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [nameCache, setNameCache] = useState<Record<string, string>>({})
-  const [filters, setFilters] = useState<TeamTicketFilters>({
+  const [filters, setFilters]     = useState<TeamTicketFilters>({
     status: '', severity: '', priority: '', search: '', quickFilter: 'all',
   })
 
@@ -31,19 +31,32 @@ export function useTeamTickets() {
     setIsLoading(true)
     setTickets([])
     try {
-      const res = await ticketService.getAllTickets({
-        page, page_size: PAGE_SIZE,
-        ...(teamId                               && { team_id:       teamId }),
-        ...(filters.status                       && { status:        filters.status }),
-        ...(filters.severity                     && { severity:      filters.severity }),
-        ...(filters.priority                     && { priority:      filters.priority }),
-        ...(filters.quickFilter === 'unassigned' && { is_unassigned: true }),
-        ...(filters.quickFilter === 'escalated'  && { is_escalated:  true }),
-      })
+      const params: Record<string, any> = {
+        page,
+        page_size: PAGE_SIZE,
+        ...(teamId             && { team_id:  teamId }),
+        ...(filters.severity   && { severity: filters.severity }),
+        ...(filters.priority   && { priority: filters.priority }),
+      }
+
+      if (filters.quickFilter === 'unassigned') {
+        // Unclaimed = ACKNOWLEDGED tickets with no assignee.
+        // OPEN tickets always have an assignee (assignment triggers ACKNOWLEDGED→OPEN).
+        // Using status=ACKNOWLEDGED + is_unassigned=true gives the precise set.
+        params.is_unassigned = true
+        params.status = 'ACKNOWLEDGED'
+      } else if (filters.quickFilter === 'escalated') {
+        params.is_escalated = true
+      } else {
+        // No quickFilter — apply user-selected status filter if any
+        if (filters.status) params.status = filters.status
+      }
+
+      const res = await ticketService.getAllTickets(params)
       setTickets(res.items)
       setTotal(res.total)
 
-      // Resolve assignee names
+      // Resolve assignee display names
       const unknownIds = [...new Set(
         res.items.map(t => t.assignee_id).filter((id): id is string => !!id)
       )]
@@ -68,13 +81,7 @@ export function useTeamTickets() {
 
   useEffect(() => { load() }, [load])
 
-  const resolveAssigneeName = (assigneeId: string | null | undefined): void => {
-    if (!assigneeId || nameCache[assigneeId]) return
-    userService.getUserById(assigneeId)
-      .then(u => setNameCache(c => ({ ...c, [assigneeId]: u.full_name || u.email })))
-      .catch(() => {})
-  }
-
+  // Client-side search filter
   const displayed = filters.search
     ? tickets.filter(t =>
         t.title.toLowerCase().includes(filters.search.toLowerCase()) ||
@@ -84,7 +91,7 @@ export function useTeamTickets() {
   return {
     tickets: displayed,
     total, page, setPage, isLoading,
-    nameCache, resolveAssigneeName,
+    nameCache,
     filters, setFilters,
     refetch: load,
   }

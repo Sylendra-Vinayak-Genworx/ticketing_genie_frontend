@@ -19,7 +19,6 @@ import { ticketService } from '@/features/tickets/services/ticketService'
 import toast from 'react-hot-toast'
 import type { TicketStatus, AddCommentRequest, User } from '@/types'
 
-// Which statuses an agent can transition to from each current status
 const ALLOWED_TRANSITIONS: Record<string, TicketStatus[]> = {
   NEW:          ['ACKNOWLEDGED'],
   ACKNOWLEDGED: ['OPEN'],
@@ -64,15 +63,17 @@ export default function TicketDetailPage() {
   const [tab, setTab] = useState<'conversation' | 'details' | 'timeline'>('details')
 
   // Resolved display names
-  const [assigneeName, setAssigneeName] = useState<string | null>(null)
-  const [customerName, setCustomerName] = useState<string | null>(null)
-  const [areaName, setAreaName]         = useState<string | null>(null)
+  const [assigneeName,   setAssigneeName]   = useState<string | null>(null)
+  const [customerName,   setCustomerName]   = useState<string | null>(null)
+  const [areaName,       setAreaName]       = useState<string | null>(null)
+  // FIX: map of user_id → display name for timeline actors
+  const [eventUserNames, setEventUserNames] = useState<Record<string, string>>({})
 
   useEffect(() => {
     if (id) fetchById(Number(id))
   }, [id])
 
-  // Resolve display names whenever the ticket changes
+  // Resolve all display names whenever the ticket changes
   useEffect(() => {
     if (!currentTicket) return
 
@@ -97,9 +98,34 @@ export default function TicketDetailPage() {
     authService.getUserById(currentTicket.customer_id)
       .then(u => setCustomerName(u.full_name || u.email))
       .catch(() => setCustomerName(`Guest (${currentTicket.customer_id.slice(0, 8)})`))
-  }, [currentTicket?.ticket_id])
 
-  // When assign modal opens, fetch agents for the current lead
+    // Resolve all unique user IDs from timeline events:
+    // - triggered_by_user_id = who performed the action
+    // - new_value / old_value on ASSIGNED events = the assignee UUID
+    const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    const actorIds = [
+      ...new Set([
+        ...currentTicket.events
+          .map((e: any) => e.triggered_by_user_id)
+          .filter((id: any): id is string => !!id),
+        ...currentTicket.events
+          .filter((e: any) => e.event_type === 'ASSIGNED')
+          .flatMap((e: any) => [e.new_value, e.old_value])
+          .filter((v: any): v is string => !!v && UUID_RE.test(v)),
+      ]),
+    ]
+    if (actorIds.length > 0) {
+      const nameMap: Record<string, string> = {}
+      Promise.all(
+        actorIds.map(uid =>
+          authService.getUserById(uid)
+            .then(u => { nameMap[uid] = u.full_name || u.email })
+            .catch(() => { nameMap[uid] = uid.slice(0, 8) + '…' })
+        )
+      ).then(() => setEventUserNames(nameMap))
+    }
+  }, [currentTicket?.ticket_id, currentTicket?.events?.length])
+
   async function openAssignModal() {
     setAssigneeId('')
     setAgents([])
@@ -186,6 +212,7 @@ export default function TicketDetailPage() {
     }
   }
 
+  // FIX: dismiss modal after closing
   async function handleClose() {
     if (!currentTicket) return
     await updateStatus(currentTicket.ticket_id, { new_status: 'CLOSED' })
@@ -212,13 +239,8 @@ export default function TicketDetailPage() {
 
   const t = currentTicket
 
-  const getInProgressAt = () => {
-    return (t as any).in_progress_at || (t as any).first_response_at || null
-  }
-
-  const getResolvedAt = () => {
-    return (t as any).resolved_at || null
-  }
+  const getInProgressAt = () => (t as any).in_progress_at || (t as any).first_response_at || null
+  const getResolvedAt   = () => (t as any).resolved_at || null
 
   return (
     <div className="space-y-5">
@@ -245,7 +267,6 @@ export default function TicketDetailPage() {
           </p>
         </div>
 
-        {/* Action buttons and SLA indicators */}
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
           <button onClick={() => fetchById(t.ticket_id)} className="btn-ghost p-2" title="Refresh">
             <RefreshCw className="w-4 h-4" />
@@ -270,14 +291,12 @@ export default function TicketDetailPage() {
             </button>
           )}
 
-          {/* Customer only: Close when RESOLVED */}
           {!isAgent && t.status === 'RESOLVED' && (
             <button onClick={() => setCloseConfirm(true)} className="btn-danger">
               <Lock className="w-4 h-4" /> Close
             </button>
           )}
 
-          {/* Customer only: Reopen when CLOSED */}
           {!isAgent && t.status === 'CLOSED' && (
             <button onClick={() => setReopenConfirm(true)} className="btn-secondary">
               <RefreshCw className="w-4 h-4" /> Reopen
@@ -288,7 +307,6 @@ export default function TicketDetailPage() {
 
       {/* Main Content */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
-        {/* Left / Main */}
         <div className="xl:col-span-2 space-y-4">
           {/* Tabs */}
           <div className="flex gap-0.5 border-b border-gray-200 overflow-x-auto">
@@ -296,7 +314,7 @@ export default function TicketDetailPage() {
               { key: 'details',      label: 'Details',      icon: Info },
               { key: 'timeline',     label: 'Timeline',     icon: History, count: t.events.length },
               { key: 'conversation', label: 'Conversation', icon: MessageSquare,
-                count: isAgent ? t.comments.length : t.comments.filter(c => !c.is_internal).length },
+                count: isAgent ? t.comments.length : t.comments.filter((c: any) => !c.is_internal).length },
             ].map(tab_ => (
               <button
                 key={tab_.key}
@@ -328,8 +346,7 @@ export default function TicketDetailPage() {
 
               {t.comments.length > 0 && (
                 <div className="space-y-3">
-                  {/* FIX 1: Filter out internal notes for non-agents (customers) */}
-                  {t.comments.filter(comment => isAgent || !comment.is_internal).map((comment) => (
+                  {t.comments.filter((comment: any) => isAgent || !comment.is_internal).map((comment: any) => (
                     <div
                       key={comment.comment_id}
                       className={`card p-4 ${comment.is_internal ? 'border-yellow-200 bg-yellow-50' : ''}`}
@@ -397,19 +414,19 @@ export default function TicketDetailPage() {
             <div className="card p-5 space-y-5">
               <dl className="grid grid-cols-2 gap-4 text-sm">
                 {[
-                  { label: 'Ticket ID',       value: t.ticket_number },
-                  { label: 'Title',           value: t.title },
-                  { label: 'Description',     value: t.description },
-                  { label: 'Source',          value: (t.source as string) === 'ui' ? 'Manual Assignment' : 'Email Assignment' },
-                  { label: 'Environment',     value: t.environment },
-                  { label: 'Status',          value: t.status.replace(/_/g, ' ') },
-                  { label: 'Issue Type',      value: areaName ?? (t.area_of_concern ? `Area ${t.area_of_concern}` : '—') },
-                  { label: 'Priority',        value: t.priority },
-                  { label: 'Severity',        value: t.severity },
-                  { label: 'Customer',        value: customerName ?? `Guest (${t.customer_id.slice(0, 8)})` },
-                  { label: 'Assignee',        value: assigneeName ?? (t.assignee_id ? `Guest (${t.assignee_id.slice(0, 8)})` : 'Unassigned') },
-                  { label: 'Created',         value: formatDateTime(t.created_at) },
-                  { label: 'Updated',         value: formatDateTime(t.updated_at) },
+                  { label: 'Ticket ID',   value: t.ticket_number },
+                  { label: 'Title',       value: t.title },
+                  { label: 'Description', value: t.description },
+                  { label: 'Source',      value: (t.source as string) === 'ui' ? 'Manual Assignment' : 'Email Assignment' },
+                  { label: 'Environment', value: t.environment },
+                  { label: 'Status',      value: t.status.replace(/_/g, ' ') },
+                  { label: 'Issue Type',  value: areaName ?? (t.area_of_concern ? `Area ${t.area_of_concern}` : '—') },
+                  { label: 'Priority',    value: t.priority },
+                  { label: 'Severity',    value: t.severity },
+                  { label: 'Customer',    value: customerName ?? `Guest (${t.customer_id.slice(0, 8)})` },
+                  { label: 'Assignee',    value: assigneeName ?? (t.assignee_id ? `Guest (${t.assignee_id.slice(0, 8)})` : 'Unassigned') },
+                  { label: 'Created',     value: formatDateTime(t.created_at) },
+                  { label: 'Updated',     value: formatDateTime(t.updated_at) },
                 ].map(({ label, value }) => (
                   <div key={label} className={label === 'Description' ? 'col-span-2' : ''}>
                     <dt className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</dt>
@@ -418,7 +435,6 @@ export default function TicketDetailPage() {
                 ))}
               </dl>
 
-              {/* SLA Status */}
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Response SLA</p>
@@ -430,7 +446,6 @@ export default function TicketDetailPage() {
                     slaType="response"
                     firstResponseAt={getInProgressAt()}
                     isBreached={t.is_breached}
-                    
                   />
                 </div>
                 <div>
@@ -449,10 +464,10 @@ export default function TicketDetailPage() {
             </div>
           )}
 
-          {/* Timeline tab */}
+          {/* Timeline tab — FIX: pass resolved user names */}
           {tab === 'timeline' && (
             <div className="card p-5">
-              <StatusStepper events={t.events} />
+              <StatusStepper events={t.events} userNames={eventUserNames} />
             </div>
           )}
         </div>
@@ -462,7 +477,7 @@ export default function TicketDetailPage() {
           {t.attachments.length > 0 && (
             <div className="card p-4 space-y-2 text-sm">
               <h3 className="font-semibold text-gray-900">Attachments ({t.attachments.length})</h3>
-              {t.attachments.map(att => (
+              {t.attachments.map((att: any) => (
                 <a key={att.attachment_id} href={att.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
                   <Paperclip className="w-3.5 h-3.5" />
                   {att.file_name}
@@ -523,41 +538,25 @@ export default function TicketDetailPage() {
         }
       >
         <div className="space-y-2">
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">
-            Select Agent
-          </label>
-
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Select Agent</label>
           {agentsLoading ? (
             <div className="flex items-center gap-2 py-4 text-sm text-gray-500">
               <Loader2 className="w-4 h-4 animate-spin" /> Loading agents…
             </div>
           ) : agents.length === 0 ? (
-            <p className="text-sm text-gray-400 py-3">
-              No agents found for this team.
-            </p>
+            <p className="text-sm text-gray-400 py-3">No agents found for this team.</p>
           ) : (
-            <select
-              value={assigneeId}
-              onChange={(e) => setAssigneeId(e.target.value)}
-              className="input-field"
-            >
+            <select value={assigneeId} onChange={(e) => setAssigneeId(e.target.value)} className="input-field">
               <option value="">Select an agent…</option>
               {agents.map(agent => (
                 <option key={agent.id} value={agent.id}>
-                  {agent.full_name
-                    ? `${agent.full_name} (${agent.email})`
-                    : agent.email
-                  }
+                  {agent.full_name ? `${agent.full_name} (${agent.email})` : agent.email}
                 </option>
               ))}
             </select>
           )}
-
           <p className="text-xs text-gray-400 mt-1">
-            {role === 'team_lead'
-              ? 'Showing agents from your team.'
-              : 'Showing all available support agents.'
-            }
+            {role === 'team_lead' ? 'Showing agents from your team.' : 'Showing all available support agents.'}
           </p>
         </div>
       </Modal>

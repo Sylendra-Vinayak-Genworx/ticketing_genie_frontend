@@ -1,6 +1,9 @@
-import React, { useEffect, useState } from 'react'
+import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { UsersRound, RefreshCw, Search, AlertTriangle, Clock, CheckCircle2, UserCheck, UserPlus, UserCog } from 'lucide-react'
+import {
+  UsersRound, RefreshCw, Search, AlertTriangle,
+  Clock, CheckCircle2, UserCheck, UserPlus, UserCog,
+} from 'lucide-react'
 import { useTeamTickets } from '@/features/tickets/hooks/useTeamTickets'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
@@ -11,6 +14,14 @@ import { AssignModal } from '@/components/common/AssignModal'
 import { formatRelative } from '@/utils'
 import type { TicketBrief, TicketStatus, Severity, Priority } from '@/types'
 import { TICKET_STATUSES, SEVERITIES, PRIORITIES } from '@/config/constants'
+
+const PAGE_SIZE = 20
+
+// Unclaimed = no assignee AND status is ACKNOWLEDGED (waiting to be claimed).
+// OPEN tickets always have an assignee — ACKNOWLEDGED→OPEN only happens on assignment.
+function isUnclaimed(t: TicketBrief): boolean {
+  return !t.assignee_id && t.status === 'ACKNOWLEDGED'
+}
 
 function StatCard({ icon, label, value, accent, active, onClick }: {
   icon: React.ReactNode; label: string; value: number; accent: string
@@ -31,26 +42,137 @@ function StatCard({ icon, label, value, accent, active, onClick }: {
   )
 }
 
+function GroupDivider({ label, count, className }: { label: string; count: number; className: string }) {
+  return (
+    <tr>
+      <td colSpan={9} className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-y ${className}`}>
+        {label}
+        <span className="ml-2 font-normal opacity-60">({count})</span>
+      </td>
+    </tr>
+  )
+}
+
 export default function TeamTicketsPage() {
   const navigate = useNavigate()
   const { tickets, total, page, setPage, isLoading, nameCache, filters, setFilters, refetch } = useTeamTickets()
-
   const [assignTarget, setAssignTarget] = useState<TicketBrief | null>(null)
-  const PAGE_SIZE = 20
 
-  const activeCount    = tickets.filter(t => ['OPEN', 'IN_PROGRESS', 'ON_HOLD'].includes(t.status)).length
+  // ── Stats ─────────────────────────────────────────────────────────────────
+  const activeCount    = tickets.filter(t => ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'ACKNOWLEDGED'].includes(t.status)).length
   const breachedCount  = tickets.filter(t => t.is_breached).length
-  const unclaimedCount = tickets.filter(t => !t.assignee_id).length
+  const unclaimedCount = tickets.filter(isUnclaimed).length
   const resolvedCount  = tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length
+
+  // ── Grouped sections (only when no quick filter / status filter) ──────────
+  const isFiltered = filters.quickFilter !== 'all' || !!filters.status || !!filters.severity || !!filters.priority || !!filters.search
+  const escalatedGroup = tickets.filter(t => t.is_escalated)
+  const unclaimedGroup = tickets.filter(t => isUnclaimed(t) && !t.is_escalated)
+  const assignedGroup  = tickets.filter(t => t.assignee_id && !t.is_escalated)
 
   function toggleQuickFilter(qf: 'unassigned' | 'escalated') {
     setFilters(f => ({ ...f, quickFilter: f.quickFilter === qf ? 'all' : qf }))
     setPage(1)
   }
 
-  function handleAssigned(updated: TicketBrief) {
-    setAssignTarget(null)
-    refetch()
+  // ── Single ticket row ─────────────────────────────────────────────────────
+  function TicketRow({ ticket }: { ticket: TicketBrief }) {
+    return (
+      <tr
+        className={`hover:bg-violet-50/40 transition-colors ${
+          ticket.is_escalated ? 'bg-orange-50/20' : ''
+        }`}
+      >
+        <td className="px-4 py-3 font-mono text-xs font-semibold whitespace-nowrap">
+          <button className="text-violet-600 hover:underline" onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}>
+            {ticket.ticket_number}
+          </button>
+          {ticket.is_escalated && <span className="ml-1.5 text-orange-500" title="Escalated">▲</span>}
+          {ticket.is_breached  && <span className="ml-1 text-red-500"      title="SLA Breached">●</span>}
+        </td>
+        <td className="px-4 py-3 max-w-[200px] cursor-pointer" onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}>
+          <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
+          <p className="text-xs text-gray-400 mt-0.5">{ticket.product} · {ticket.environment}</p>
+        </td>
+        <td className="px-4 py-3"><StatusBadge   status={ticket.status}     /></td>
+        <td className="px-4 py-3"><PriorityBadge priority={ticket.priority} /></td>
+        <td className="px-4 py-3"><SeverityBadge severity={ticket.severity} /></td>
+        <td className="px-4 py-3">
+          <SLATimer
+            responseDueAt={ticket.response_due_at}
+            resolutionDueAt={ticket.resolution_due_at}
+            status={ticket.status}
+            isBreached={ticket.is_breached}
+            resolvedAt={ticket.resolved_at}
+            resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
+            compact
+          />
+        </td>
+        <td className="px-4 py-3 text-xs">
+          {ticket.assignee_id
+            ? <span className="font-medium text-gray-700">{nameCache[ticket.assignee_id] ?? `${ticket.assignee_id.slice(0, 8)}…`}</span>
+            : <span className="inline-flex items-center gap-1 text-amber-600 font-medium"><UserCheck className="w-3 h-3" />Unclaimed</span>}
+        </td>
+        <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.updated_at)}</td>
+        <td className="px-4 py-3">
+          {ticket.assignee_id ? (
+            <></>
+          ) : (
+            <button onClick={e => { e.stopPropagation(); setAssignTarget(ticket) }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors whitespace-nowrap">
+              <UserPlus className="w-3.5 h-3.5" /> Assign
+            </button>
+          )}
+        </td>
+      </tr>
+    )
+  }
+
+  // ── Table body — grouped or flat ──────────────────────────────────────────
+  function TableBody() {
+    if (isLoading) return <>{Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={9} />)}</>
+    if (tickets.length === 0) return null
+
+    // Filtered view — flat list, no grouping
+    if (isFiltered) return <>{tickets.map(t => <TicketRow key={t.ticket_id} ticket={t} />)}</>
+
+    // Default view — three clear sections
+    return (
+      <>
+        {escalatedGroup.length > 0 && (
+          <>
+            <GroupDivider
+              label="🔴 Escalated — Requires Immediate Attention"
+              count={escalatedGroup.length}
+              className="bg-orange-50 text-orange-700 border-orange-200"
+            />
+            {escalatedGroup.map(t => <TicketRow key={t.ticket_id} ticket={t} />)}
+          </>
+        )}
+
+        {unclaimedGroup.length > 0 && (
+          <>
+            <GroupDivider
+              label="🟡 Unclaimed — Waiting for Agent to Self-Claim"
+              count={unclaimedGroup.length}
+              className="bg-amber-50 text-amber-700 border-amber-200"
+            />
+            {unclaimedGroup.map(t => <TicketRow key={t.ticket_id} ticket={t} />)}
+          </>
+        )}
+
+        {assignedGroup.length > 0 && (
+          <>
+            <GroupDivider
+              label="🟢 Assigned — In Progress"
+              count={assignedGroup.length}
+              className="bg-blue-50 text-blue-700 border-blue-100"
+            />
+            {assignedGroup.map(t => <TicketRow key={t.ticket_id} ticket={t} />)}
+          </>
+        )}
+      </>
+    )
   }
 
   return (
@@ -63,16 +185,25 @@ export default function TeamTicketsPage() {
 
       <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-violet-50 border border-violet-200 text-violet-800 text-sm">
         <UsersRound className="w-4 h-4 mt-0.5 shrink-0 text-violet-500" />
-        <span>Tickets routed to <strong>your team's queue</strong>. Unclaimed tickets need an agent to self-claim. Escalated tickets require immediate attention.</span>
+        <span>
+          Tickets routed to <strong>your team's queue</strong>.
+          Unclaimed tickets (status: Acknowledged) need an agent to self-claim.
+          Escalated tickets require immediate attention.
+        </span>
       </div>
 
       {!isLoading && (
         <div className="grid grid-cols-4 gap-4">
-          <StatCard icon={<Clock className="w-5 h-5 text-blue-500" />} label="Active" value={activeCount} accent="border-blue-400" />
-          <StatCard icon={<AlertTriangle className="w-5 h-5 text-orange-500" />} label="SLA breached" value={breachedCount} accent="border-orange-400" />
-          <StatCard icon={<UserCheck className="w-5 h-5 text-yellow-500" />} label="Unclaimed" value={unclaimedCount} accent="border-yellow-400"
-            active={filters.quickFilter === 'unassigned'} onClick={() => toggleQuickFilter('unassigned')} />
-          <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />} label="Resolved" value={resolvedCount} accent="border-green-400" />
+          <StatCard icon={<Clock className="w-5 h-5 text-blue-500" />}
+            label="Active" value={activeCount} accent="border-blue-400" />
+          <StatCard icon={<AlertTriangle className="w-5 h-5 text-orange-500" />}
+            label="SLA Breached" value={breachedCount} accent="border-orange-400" />
+          <StatCard icon={<UserCheck className="w-5 h-5 text-yellow-500" />}
+            label="Unclaimed" value={unclaimedCount} accent="border-yellow-400"
+            active={filters.quickFilter === 'unassigned'}
+            onClick={() => toggleQuickFilter('unassigned')} />
+          <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />}
+            label="Resolved" value={resolvedCount} accent="border-green-400" />
         </div>
       )}
 
@@ -85,7 +216,7 @@ export default function TeamTicketsPage() {
                 ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-sm'
                 : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:text-amber-600'
             }`}>
-            <UserPlus className="w-3.5 h-3.5" /> Unassigned
+            <UserPlus className="w-3.5 h-3.5" /> Unclaimed
           </button>
           <button onClick={() => toggleQuickFilter('escalated')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
@@ -109,8 +240,9 @@ export default function TeamTicketsPage() {
               onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} className="input-field pl-9" />
           </div>
           <select value={filters.status}
-            onChange={e => { setFilters(f => ({ ...f, status: e.target.value as TicketStatus | '' })); setPage(1) }}
-            className="input-field w-auto min-w-[140px]">
+            onChange={e => { setFilters(f => ({ ...f, status: e.target.value as TicketStatus | '', quickFilter: 'all' })); setPage(1) }}
+            className="input-field w-auto min-w-[140px]"
+            disabled={filters.quickFilter !== 'all'}>
             <option value="">All Statuses</option>
             {TICKET_STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
           </select>
@@ -134,61 +266,29 @@ export default function TeamTicketsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-violet-50 border-b border-violet-100">
-                {['Ticket #','Title','Status','Priority','Severity','SLA','Assignee','Updated','Action'].map(h => (
+                {['Ticket #', 'Title', 'Status', 'Priority', 'Severity', 'SLA', 'Assignee', 'Updated', 'Action'].map(h => (
                   <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
                 ))}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
-              {isLoading
-                ? Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={9} />)
-                : tickets.map(ticket => (
-                  <tr key={ticket.ticket_id} className="hover:bg-violet-50/40 transition-colors">
-                    <td className="px-4 py-3 font-mono text-xs font-semibold whitespace-nowrap">
-                      <button className="text-violet-600 hover:underline" onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}>
-                        {ticket.ticket_number}
-                      </button>
-                      {ticket.is_escalated && <span className="ml-1.5 text-orange-500" title="Escalated">▲</span>}
-                      {ticket.is_breached  && <span className="ml-1 text-red-500"      title="SLA Breached">●</span>}
-                    </td>
-                    <td className="px-4 py-3 max-w-[200px] cursor-pointer" onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}>
-                      <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
-                      <p className="text-xs text-gray-400 mt-0.5">{ticket.product} · {ticket.environment}</p>
-                    </td>
-                    <td className="px-4 py-3"><StatusBadge   status={ticket.status}     /></td>
-                    <td className="px-4 py-3"><PriorityBadge priority={ticket.priority} /></td>
-                    <td className="px-4 py-3"><SeverityBadge severity={ticket.severity} /></td>
-                    <td className="px-4 py-3"><SLATimer isBreached={ticket.is_breached} dueAt={ticket.resolution_due_at} status={ticket.status}  resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}  resolvedAt={ticket.resolved_at} compact /></td>
-                    <td className="px-4 py-3 text-xs">
-                      {ticket.assignee_id
-                        ? <span className="font-medium text-gray-700">{nameCache[ticket.assignee_id] ?? `${ticket.assignee_id.slice(0, 8)}…`}</span>
-                        : <span className="inline-flex items-center gap-1 text-amber-600 font-medium"><UserCheck className="w-3 h-3" />Unclaimed</span>}
-                    </td>
-                    <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.updated_at)}</td>
-                    <td className="px-4 py-3">
-                      {ticket.assignee_id ? (
-                        <button onClick={e => { e.stopPropagation(); setAssignTarget(ticket) }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-blue-50 text-blue-700 hover:bg-blue-100 border border-blue-200 transition-colors whitespace-nowrap">
-                          <UserCog className="w-3.5 h-3.5" /> Reassign
-                        </button>
-                      ) : (
-                        <button onClick={e => { e.stopPropagation(); setAssignTarget(ticket) }}
-                          className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors whitespace-nowrap">
-                          <UserPlus className="w-3.5 h-3.5" /> Assign
-                        </button>
-                      )}
-                    </td>
-                  </tr>
-                ))
-              }
+              <TableBody />
             </tbody>
           </table>
         </div>
+
         {!isLoading && tickets.length === 0 && (
-          <EmptyState icon={<UsersRound className="w-12 h-12 text-violet-200" />} title="No team tickets"
-            description={filters.search || filters.status || filters.severity || filters.priority || filters.quickFilter !== 'all'
-              ? 'No tickets match your current filters' : 'Your team has no active tickets'} />
+          <EmptyState
+            icon={<UsersRound className="w-12 h-12 text-violet-200" />}
+            title="No team tickets"
+            description={
+              isFiltered
+                ? 'No tickets match your current filters'
+                : 'Your team has no active tickets'
+            }
+          />
         )}
+
         {!isLoading && tickets.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-100">
             <Pagination total={total} page={page} pageSize={PAGE_SIZE} onPageChange={p => setPage(p)} />
@@ -200,7 +300,7 @@ export default function TeamTicketsPage() {
         ticket={assignTarget}
         currentAssigneeName={assignTarget?.assignee_id ? nameCache[assignTarget.assignee_id] : null}
         onClose={() => setAssignTarget(null)}
-        onAssigned={handleAssigned}
+        onAssigned={() => { setAssignTarget(null); refetch() }}
       />
     </div>
   )

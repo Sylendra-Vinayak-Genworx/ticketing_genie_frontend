@@ -6,6 +6,7 @@ import { useAppDispatch } from '@/hooks'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 
+
 const LoginForm       = lazy(() => import('@/features/auth/components/LoginForm'))
 const SignupForm      = lazy(() => import('@/features/auth/components/SignupForm'))
 const DashboardPage        = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
@@ -21,6 +22,7 @@ const TeamTicketsPage      = lazy(() => import('@/features/tickets/pages/TeamTic
 const KeywordRulesPage     = lazy(() => import('@/features/keywords/pages/KeywordRulesPage'))
 const UsersPage            = lazy(() => import('@/features/users/pages/UsersPage'))
 const TeamsPage            = lazy(() => import('@/features/users/pages/TeamsPage'))
+const SubscriptionPage   =lazy(() =>import('@/features/subscription/pages/SubscriptionPage'))
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -95,6 +97,9 @@ export default function AppRoutes() {
                     } />
                     <Route path="/teams" element={
                       <RoleRoute roles={['admin']}><TeamsPage /></RoleRoute>
+                    } />
+                    <Route path="/subscription"       element={
+                      <RoleRoute roles={['user']}><SubscriptionPage /></RoleRoute>
                     } />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>

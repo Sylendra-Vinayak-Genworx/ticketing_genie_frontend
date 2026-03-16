@@ -1,14 +1,15 @@
-import React, { useState } from 'react'
+import React, { useEffect, useState } from 'react'
 import {
   Plus, Trash2, Loader2, Users, UserPlus,
   ChevronDown, ChevronRight, Mail, Crown, UserMinus,
 } from 'lucide-react'
-import { useTeams } from '@/features/users/hooks/useTeams'
+import { authService } from '@/features/auth/services/authService'
 import { PageHeader } from '@/components/common/PageHeader'
 import { LoadingSpinner, EmptyState } from '@/components/common/LoadingSpinner'
 import { Modal, ConfirmModal } from '@/components/ui/Modal'
 import { Avatar } from '@/components/ui/Avatar'
 import { RoleBadge } from '@/components/ui/Badge'
+import toast from 'react-hot-toast'
 import type { Team, User } from '@/types'
 
 const EMPTY_TEAM_FORM = {
@@ -17,6 +18,8 @@ const EMPTY_TEAM_FORM = {
   lead_id: '',
   member_ids: [] as string[],
 }
+
+// ─── Team Card ────────────────────────────────────────────────────────────────
 
 function TeamCard({
   team, allUsers, onDelete, onAddMember, onRemoveMember,
@@ -139,61 +142,148 @@ function TeamCard({
   )
 }
 
+// ─── Page ─────────────────────────────────────────────────────────────────────
+
 export default function TeamsPage() {
-  const { teams, allUsers, isLoading, isSubmitting, createTeam, deleteTeam, addMember, removeMember } = useTeams()
+  const [teams, setTeams]       = useState<Team[]>([])
+  const [allUsers, setAllUsers] = useState<User[]>([])
+  const [loading, setLoading]   = useState(true)
+  const [submitting, setSubmitting] = useState(false)
 
   const [createOpen, setCreateOpen] = useState(false)
-  const [teamForm, setTeamForm] = useState(EMPTY_TEAM_FORM)
-  const [addMemberTarget, setAddMemberTarget] = useState<Team | null>(null)
-  const [memberForm, setMemberForm] = useState<{ user_id: string }>({ user_id: '' })
-  const [deleteTeamTarget, setDeleteTeamTarget] = useState<Team | null>(null)
-  const [removeMemberTarget, setRemoveMemberTarget] = useState<{ team: Team; userId: string; name: string } | null>(null)
+  const [teamForm, setTeamForm]     = useState(EMPTY_TEAM_FORM)
 
+  const [addMemberTarget, setAddMemberTarget] = useState<Team | null>(null)
+  const [memberForm, setMemberForm]           = useState<{user_id: string}>({ user_id: '' })
+
+  const [deleteTeamTarget, setDeleteTeamTarget]     = useState<Team | null>(null)
+  const [removeMemberTarget, setRemoveMemberTarget] = useState<{
+    team: Team; userId: string; name: string
+  } | null>(null)
+
+  async function load() {
+    setLoading(true)
+    try {
+      const [teamsData, usersData] = await Promise.all([
+        authService.listTeams(),
+        authService.getAllUsers(),
+      ])
+      setTeams(teamsData.teams)
+      setAllUsers(usersData)
+    } catch {
+      toast.error('Failed to load teams')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  useEffect(() => { load() }, [])
+
+  // ── Derived ────────────────────────────────────────────────────────────────
   const eligibleUsers = allUsers.filter(u => u.role === 'support_agent' || u.role === 'team_lead')
 
-  function openCreate() { setTeamForm({ ...EMPTY_TEAM_FORM }); setCreateOpen(true) }
+  // ── Create team ────────────────────────────────────────────────────────────
+  function openCreate() {
+    setTeamForm({ ...EMPTY_TEAM_FORM })
+    setCreateOpen(true)
+  }
 
   function toggleMemberSelection(userId: string) {
     setTeamForm(f => {
       const isSelected = f.member_ids.includes(userId)
-      return isSelected
-        ? { ...f, member_ids: f.member_ids.filter(id => id !== userId) }
-        : { ...f, member_ids: [...f.member_ids, userId] }
+      if (isSelected) {
+        return { ...f, member_ids: f.member_ids.filter(id => id !== userId) }
+      } else {
+        return { ...f, member_ids: [...f.member_ids, userId] }
+      }
     })
   }
 
   async function handleCreateTeam() {
-    if (!teamForm.name.trim()) return
-    if (!teamForm.lead_id) return
-    const ok = await createTeam({
-      name: teamForm.name.trim(),
-      description: teamForm.description.trim() || undefined,
-      lead_id: teamForm.lead_id,
-      member_ids: Array.from(new Set([...teamForm.member_ids, teamForm.lead_id])),
-    })
-    if (ok) setCreateOpen(false)
+    if (!teamForm.name.trim()) {
+      toast.error('Team name is required')
+      return
+    }
+    if (!teamForm.lead_id) {
+      toast.error('A Team Lead must be selected')
+      return
+    }
+
+    setSubmitting(true)
+    try {
+      await authService.createTeam({
+        name: teamForm.name.trim(),
+        description: teamForm.description.trim() || undefined,
+        lead_id: teamForm.lead_id,
+        member_ids: Array.from(new Set([...teamForm.member_ids, teamForm.lead_id])),
+      })
+      toast.success(`Team "${teamForm.name}" created`)
+      setCreateOpen(false)
+      load()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to create team')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
-  function openAddMember(team: Team) { setAddMemberTarget(team); setMemberForm({ user_id: '' }) }
+  // ── Add member ─────────────────────────────────────────────────────────────
+  function openAddMember(team: Team) {
+    setAddMemberTarget(team)
+    setMemberForm({ user_id: '' })
+  }
 
   async function handleAddMember() {
-    if (!addMemberTarget || !memberForm.user_id) return
-    const ok = await addMember(addMemberTarget.id, memberForm)
-    if (ok) setAddMemberTarget(null)
+    if (!addMemberTarget) return
+    if (!memberForm.user_id) {
+      toast.error('Please select a user')
+      return
+    }
+    setSubmitting(true)
+    try {
+      await authService.addMember(addMemberTarget.id, memberForm)
+      toast.success('Member added to team')
+      setAddMemberTarget(null)
+      load()
+    } catch (err: any) {
+      toast.error(err?.response?.data?.detail || 'Failed to add member')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
+  // ── Delete / remove ────────────────────────────────────────────────────────
   async function handleDeleteTeam() {
     if (!deleteTeamTarget) return
-    const ok = await deleteTeam(deleteTeamTarget)
-    if (ok) setDeleteTeamTarget(null)
+    setSubmitting(true)
+    try {
+      await authService.deleteTeam(deleteTeamTarget.id)
+      toast.success(`Team "${deleteTeamTarget.name}" deleted`)
+      setDeleteTeamTarget(null)
+      load()
+    } catch {
+      toast.error('Failed to delete team')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
   async function handleRemoveMember() {
     if (!removeMemberTarget) return
-    const ok = await removeMember(removeMemberTarget.team.id, removeMemberTarget.userId, removeMemberTarget.name)
-    if (ok) setRemoveMemberTarget(null)
+    setSubmitting(true)
+    try {
+      await authService.removeMember(removeMemberTarget.team.id, removeMemberTarget.userId)
+      toast.success(`${removeMemberTarget.name} removed from team`)
+      setRemoveMemberTarget(null)
+      load()
+    } catch {
+      toast.error('Failed to remove member')
+    } finally {
+      setSubmitting(false)
+    }
   }
 
+  // ── Render ─────────────────────────────────────────────────────────────────
   return (
     <div className="space-y-5">
       <PageHeader
@@ -206,7 +296,7 @@ export default function TeamsPage() {
         }
       />
 
-      {isLoading ? (
+      {loading ? (
         <LoadingSpinner fullPage />
       ) : teams.length === 0 ? (
         <div className="card p-0 overflow-hidden">
@@ -214,7 +304,11 @@ export default function TeamsPage() {
             icon={<Users className="w-12 h-12" />}
             title="No teams yet"
             description="Create your first team and bulk-invite members"
-            action={<button onClick={openCreate} className="btn-primary"><Plus className="w-4 h-4" /> New Team</button>}
+            action={
+              <button onClick={openCreate} className="btn-primary">
+                <Plus className="w-4 h-4" /> New Team
+              </button>
+            }
           />
         </div>
       ) : (
@@ -226,66 +320,144 @@ export default function TeamsPage() {
               allUsers={allUsers}
               onDelete={setDeleteTeamTarget}
               onAddMember={openAddMember}
-              onRemoveMember={(t, uid, name) => setRemoveMemberTarget({ team: t, userId: uid, name })}
+              onRemoveMember={(t, uid, name) =>
+                setRemoveMemberTarget({ team: t, userId: uid, name })
+              }
             />
           ))}
         </div>
       )}
 
-      <Modal open={createOpen} onClose={() => setCreateOpen(false)} title="Create Team" size="xl"
-        footer={<><button onClick={() => setCreateOpen(false)} className="btn-secondary">Cancel</button><button onClick={handleCreateTeam} disabled={isSubmitting} className="btn-primary">{isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating…</> : <><Plus className="w-4 h-4" /> Create Team</>}</button></>}
+      {/* ── Create Team Modal ────────────────────────────────────────── */}
+      <Modal
+        open={createOpen}
+        onClose={() => setCreateOpen(false)}
+        title="Create Team"
+        size="xl"
+        footer={
+          <>
+            <button onClick={() => setCreateOpen(false)} className="btn-secondary">Cancel</button>
+            <button onClick={handleCreateTeam} disabled={submitting} className="btn-primary">
+              {submitting
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating…</>
+                : <><Plus className="w-4 h-4" /> Create Team</>
+              }
+            </button>
+          </>
+        }
       >
         <div className="space-y-5">
           <div className="grid grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Team Name <span className="text-red-500">*</span></label>
-              <input type="text" value={teamForm.name} onChange={(e) => setTeamForm((f) => ({ ...f, name: e.target.value }))} className="input-field" placeholder="e.g. Billing Support" maxLength={255} />
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Team Name <span className="text-red-500">*</span>
+              </label>
+              <input
+                type="text"
+                value={teamForm.name}
+                onChange={(e) => setTeamForm((f) => ({ ...f, name: e.target.value }))}
+                className="input-field"
+                placeholder="e.g. Billing Support"
+                maxLength={255}
+              />
             </div>
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Description</label>
-              <input type="text" value={teamForm.description} onChange={(e) => setTeamForm((f) => ({ ...f, description: e.target.value }))} className="input-field" placeholder="Optional" />
+              <input
+                type="text"
+                value={teamForm.description}
+                onChange={(e) => setTeamForm((f) => ({ ...f, description: e.target.value }))}
+                className="input-field"
+                placeholder="Optional"
+              />
             </div>
           </div>
+
+          {/* Member Selection */}
           <div>
             <div className="mb-2">
-              <label className="text-sm font-medium text-gray-700">Team Lead <span className="text-red-500">*</span></label>
-              <select value={teamForm.lead_id} onChange={(e) => setTeamForm(f => ({ ...f, lead_id: e.target.value }))} className="input-field mt-1">
+              <label className="text-sm font-medium text-gray-700">
+                Team Lead <span className="text-red-500">*</span>
+              </label>
+              <select
+                value={teamForm.lead_id}
+                onChange={(e) => setTeamForm(f => ({ ...f, lead_id: e.target.value }))}
+                className="input-field mt-1"
+              >
                 <option value="">Select a lead...</option>
-                {eligibleUsers.map(u => <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>)}
+                {eligibleUsers.map(u => (
+                  <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                ))}
               </select>
             </div>
+
             <div>
               <label className="text-sm font-medium text-gray-700">Team Members</label>
-              <p className="text-xs text-gray-400 mt-0.5 mb-2">Select agents to add to the team. The selected lead will be added automatically.</p>
+              <p className="text-xs text-gray-400 mt-0.5 mb-2">
+                Select agents to add to the team. The selected lead will be added automatically.
+              </p>
+              
               <div className="space-y-2 max-h-64 overflow-y-auto pr-1 border border-gray-100 rounded-lg p-2 bg-gray-50/50">
-                {eligibleUsers.filter(u => u.id !== teamForm.lead_id).map((u) => (
-                  <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors">
-                    <input type="checkbox" checked={teamForm.member_ids.includes(u.id)} onChange={() => toggleMemberSelection(u.id)} className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500" />
-                    <div className="flex items-center gap-2">
-                      <Avatar name={u.full_name || u.email} size="sm" />
-                      <div className="text-sm font-medium text-gray-900">{u.full_name || u.email}</div>
-                      <RoleBadge role={u.role} />
-                    </div>
-                  </label>
-                ))}
-                {eligibleUsers.filter(u => u.id !== teamForm.lead_id).length === 0 && <div className="text-sm text-gray-500 text-center py-4">No other agents available.</div>}
+                {allUsers
+                  .filter(u => u.role === 'support_agent' && u.id !== teamForm.lead_id)
+                  .map((u) => (
+                    <label key={u.id} className="flex items-center gap-3 p-2 hover:bg-white rounded cursor-pointer transition-colors">
+                      <input
+                        type="checkbox"
+                        checked={teamForm.member_ids.includes(u.id)}
+                        onChange={() => toggleMemberSelection(u.id)}
+                        className="w-4 h-4 text-blue-600 rounded border-gray-300 focus:ring-blue-500"
+                      />
+                      <div className="flex items-center gap-2">
+                        <Avatar name={u.full_name || u.email} size="sm" />
+                        <div className="text-sm font-medium text-gray-900">{u.full_name || u.email}</div>
+                        <RoleBadge role={u.role} />
+                      </div>
+                    </label>
+                  ))}
+                {allUsers.filter(u => u.role === 'support_agent' && u.id !== teamForm.lead_id).length === 0 && (
+                  <div className="text-sm text-gray-500 text-center py-4">No agents available.</div>
+                )}
               </div>
             </div>
           </div>
         </div>
       </Modal>
 
-      <Modal open={!!addMemberTarget} onClose={() => setAddMemberTarget(null)} title={`Add Member — ${addMemberTarget?.name}`} size="sm"
-        footer={<><button onClick={() => setAddMemberTarget(null)} className="btn-secondary">Cancel</button><button onClick={handleAddMember} disabled={isSubmitting} className="btn-primary">{isSubmitting ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding…</> : <><UserPlus className="w-4 h-4" /> Add & Send Invite</>}</button></>}
+      {/* ── Add Single Member Modal ──────────────────────────────────── */}
+      <Modal
+        open={!!addMemberTarget}
+        onClose={() => setAddMemberTarget(null)}
+        title={`Add Member — ${addMemberTarget?.name}`}
+        size="sm"
+        footer={
+          <>
+            <button onClick={() => setAddMemberTarget(null)} className="btn-secondary">Cancel</button>
+            <button onClick={handleAddMember} disabled={submitting} className="btn-primary">
+              {submitting
+                ? <><Loader2 className="w-4 h-4 animate-spin" /> Adding…</>
+                : <><UserPlus className="w-4 h-4" /> Add & Send Invite</>
+              }
+            </button>
+          </>
+        }
       >
         <div className="space-y-4">
           <div>
-            <label className="block text-sm font-medium text-gray-700 mb-1.5">Select Agent <span className="text-red-500">*</span></label>
-            <select value={memberForm.user_id} onChange={(e) => setMemberForm({ user_id: e.target.value })} className="input-field mt-1">
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Select Agent <span className="text-red-500">*</span>
+            </label>
+            <select
+              value={memberForm.user_id}
+              onChange={(e) => setMemberForm({ user_id: e.target.value })}
+              className="input-field mt-1"
+            >
               <option value="">Choose an agent...</option>
-              {allUsers.filter(u => (u.role === 'support_agent' || u.role === 'team_lead') && !addMemberTarget?.members.find(m => m.id === u.id)).map(u => (
-                <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
-              ))}
+              {allUsers
+                .filter(u => u.role === 'support_agent' && !addMemberTarget?.members.find(m => m.id === u.id))
+                .map(u => (
+                  <option key={u.id} value={u.id}>{u.full_name || u.email} ({u.role})</option>
+                ))}
             </select>
           </div>
           <p className="text-xs text-gray-400 flex items-center gap-1.5">
@@ -295,13 +467,29 @@ export default function TeamsPage() {
         </div>
       </Modal>
 
-      <ConfirmModal open={!!deleteTeamTarget} onClose={() => setDeleteTeamTarget(null)} onConfirm={handleDeleteTeam}
-        title="Delete Team" message={`Delete "${deleteTeamTarget?.name}"? Members will be unassigned but their accounts will remain active.`}
-        confirmLabel="Delete Team" isLoading={isSubmitting} variant="danger" />
+      {/* ── Delete Team Confirm ──────────────────────────────────────── */}
+      <ConfirmModal
+        open={!!deleteTeamTarget}
+        onClose={() => setDeleteTeamTarget(null)}
+        onConfirm={handleDeleteTeam}
+        title="Delete Team"
+        message={`Delete "${deleteTeamTarget?.name}"? Members will be unassigned but their accounts will remain active.`}
+        confirmLabel="Delete Team"
+        isLoading={submitting}
+        variant="danger"
+      />
 
-      <ConfirmModal open={!!removeMemberTarget} onClose={() => setRemoveMemberTarget(null)} onConfirm={handleRemoveMember}
-        title="Remove Member" message={`Remove ${removeMemberTarget?.name} from the team? Their account will remain active.`}
-        confirmLabel="Remove" isLoading={isSubmitting} variant="danger" />
+      {/* ── Remove Member Confirm ────────────────────────────────────── */}
+      <ConfirmModal
+        open={!!removeMemberTarget}
+        onClose={() => setRemoveMemberTarget(null)}
+        onConfirm={handleRemoveMember}
+        title="Remove Member"
+        message={`Remove ${removeMemberTarget?.name} from the team? Their account will remain active.`}
+        confirmLabel="Remove"
+        isLoading={submitting}
+        variant="danger"
+      />
     </div>
   )
 }
