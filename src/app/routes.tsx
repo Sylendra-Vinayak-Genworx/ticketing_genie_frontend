@@ -5,6 +5,7 @@ import { getMeThunk } from '@/features/auth/slices/authSlice'
 import { useAppDispatch } from '@/hooks'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import EmailConfigPage from '@/pages/Emailconfigpage'
 
 
 const LoginForm       = lazy(() => import('@/features/auth/components/LoginForm'))
@@ -100,6 +101,9 @@ export default function AppRoutes() {
                     } />
                     <Route path="/subscription"       element={
                       <RoleRoute roles={['user']}><SubscriptionPage /></RoleRoute>
+                    } />
+                    <Route path="/email-config" element={
+                      <RoleRoute roles={['admin']}><EmailConfigPage /></RoleRoute>
                     } />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>

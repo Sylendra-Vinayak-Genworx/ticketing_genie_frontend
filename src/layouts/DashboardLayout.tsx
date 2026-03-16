@@ -10,6 +10,7 @@ import { useAuth } from '@/features/auth'
 import { Avatar } from '@/components/ui/Avatar'
 import { RoleBadge } from '@/components/ui/Badge'
 import { NotificationBell, useSSENotifications } from '@/features/notifications'
+import { Label } from 'recharts'
 
 const NAV_ITEMS = {
   user: [
@@ -34,6 +35,7 @@ const NAV_ITEMS = {
     { label: 'Users',         path: '/users',             icon: Users },
     { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
     { label: 'Keyword Rules', path: '/keyword-rules',     icon: Tag },
+    { label: 'Email Config',    path: '/email-config',      icon: ClipboardList },
   ],
 }
 
