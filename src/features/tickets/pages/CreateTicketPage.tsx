@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
-import { Loader2, Paperclip, ChevronLeft } from 'lucide-react'
+import { Loader2, Paperclip, ChevronLeft, Lock } from 'lucide-react'
 import { useTickets } from '@/features/tickets/hooks/useTickets'
 import { useAreasOfConcern } from '@/features/tickets/hooks/useAreasOfConcern'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -33,7 +33,7 @@ export default function CreateTicketPage() {
     product: 'bookmyticket',
     environment: 'PROD',
     area_of_concern: '',
-    source: 'UI',
+    source: 'UI',               // fixed default — always Manual Assign for portal
   })
   const [errors, setErrors] = useState<FormErrors>({})
 
@@ -87,6 +87,7 @@ export default function CreateTicketPage() {
       />
 
       <form onSubmit={handleSubmit} noValidate className="card p-6 space-y-5">
+        {/* Title */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Title <span className="text-red-500">*</span>
@@ -105,6 +106,7 @@ export default function CreateTicketPage() {
           </div>
         </div>
 
+        {/* Description */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">
             Description <span className="text-red-500">*</span>
@@ -119,19 +121,45 @@ export default function CreateTicketPage() {
           {errors.description && <p className="mt-1 text-xs text-red-600">{errors.description}</p>}
         </div>
 
+        {/* Product + Source — two fixed read-only fields side by side */}
+        <div className="grid grid-cols-2 gap-4">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Product
+            </label>
+            <div className="input-field bg-gray-50 text-gray-500 flex items-center justify-between cursor-not-allowed select-none">
+              <span>bookmyticket</span>
+              <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            </div>
+          </div>
+
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-1.5">
+              Source
+            </label>
+            <div className="input-field bg-gray-50 text-gray-500 flex items-center justify-between cursor-not-allowed select-none">
+              <span>Manual Assign</span>
+              <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
+            </div>
+            <p className="text-xs text-gray-400 mt-1">Portal-submitted tickets</p>
+          </div>
+        </div>
+
+        {/* Area of Concern */}
         <div>
-          <label className="block text-sm font-medium text-gray-700 mb-1.5">Area of Concern</label>
+          <label className="block text-sm font-medium text-gray-700 mb-1.5">Issue Type</label>
           <select
             value={form.area_of_concern}
             onChange={(e) => set('area_of_concern', e.target.value)}
             className="input-field"
             disabled={areasLoading}
           >
-            <option value="">{areasLoading ? 'Loading…' : 'Select area of concern…'}</option>
+            <option value="">{areasLoading ? 'Loading…' : 'Select the issue type…'}</option>
             {areas.map(a => <option key={a.area_id} value={a.area_id}>{a.name}</option>)}
           </select>
         </div>
 
+        {/* Attachments */}
         <div>
           <label className="block text-sm font-medium text-gray-700 mb-1.5">Attachments</label>
           <div className="border-2 border-dashed border-gray-200 rounded-xl p-6 text-center hover:border-blue-400 hover:bg-blue-50 transition-colors cursor-pointer">
@@ -144,6 +172,7 @@ export default function CreateTicketPage() {
           </div>
         </div>
 
+        {/* Actions */}
         <div className="flex items-center justify-end gap-3 pt-2 border-t border-gray-100">
           <button type="button" onClick={() => navigate(-1)} className="btn-secondary">Cancel</button>
           <button type="submit" disabled={isSubmitting} className="btn-primary px-6">

@@ -61,7 +61,7 @@ export default function TicketDetailPage() {
   const [reopenConfirm, setReopenConfirm] = useState(false)
 
   // Active tab
-  const [tab, setTab] = useState<'conversation' | 'details' | 'timeline'>('conversation')
+  const [tab, setTab] = useState<'conversation' | 'details' | 'timeline'>('details')
 
   // Resolved display names
   const [assigneeName, setAssigneeName] = useState<string | null>(null)
@@ -105,15 +105,11 @@ export default function TicketDetailPage() {
     setAgents([])
     setAssignModalOpen(true)
 
-    // Determine which lead_id to use:
-    // - team_lead role: use their own id
-    // - admin: use the ticket's current assignee lead, or fallback to all users
     const leadId = role === 'team_lead'
       ? user!.id
       : currentTicket?.assignee_id ?? null
 
     if (!leadId) {
-      // Admin with no assignee yet — load all support agents from all users
       setAgentsLoading(true)
       try {
         const all = await authService.getAllUsers()
@@ -193,15 +189,15 @@ export default function TicketDetailPage() {
   async function handleClose() {
     if (!currentTicket) return
     await updateStatus(currentTicket.ticket_id, { new_status: 'CLOSED' })
+    setCloseConfirm(false)
     toast.success('Ticket closed')
     fetchById(currentTicket.ticket_id)
   }
 
   async function handleReopen() {
-
     if (!currentTicket) return
     await updateStatus(currentTicket.ticket_id, { new_status: 'OPEN' })
-    
+    setReopenConfirm(false)
     toast.success('Ticket reopened')
     fetchById(currentTicket.ticket_id)
   }
@@ -216,7 +212,6 @@ export default function TicketDetailPage() {
 
   const t = currentTicket
 
-  // Type-safe accessors for optional SLA timestamp fields
   const getInProgressAt = () => {
     return (t as any).in_progress_at || (t as any).first_response_at || null
   }
@@ -252,13 +247,10 @@ export default function TicketDetailPage() {
 
         {/* Action buttons and SLA indicators */}
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap justify-end">
-          {/* SLA Met indicators - shown when ticket is RESOLVED or CLOSED */}
-
           <button onClick={() => fetchById(t.ticket_id)} className="btn-ghost p-2" title="Refresh">
             <RefreshCw className="w-4 h-4" />
           </button>
 
-          {/* Agents: Change Status for all transitions EXCEPT RESOLVED→CLOSED and CLOSED→OPEN (those belong to the customer) */}
           {isAgent && (ALLOWED_TRANSITIONS[t.status] ?? []).filter(s => s !== 'CLOSED' && !(t.status === 'CLOSED')).length > 0 && (
             <button
               onClick={() => {
@@ -303,7 +295,8 @@ export default function TicketDetailPage() {
             {[
               { key: 'details',      label: 'Details',      icon: Info },
               { key: 'timeline',     label: 'Timeline',     icon: History, count: t.events.length },
-              { key: 'conversation', label: 'Conversation', icon: MessageSquare, count: t.comments.length },
+              { key: 'conversation', label: 'Conversation', icon: MessageSquare,
+                count: isAgent ? t.comments.length : t.comments.filter(c => !c.is_internal).length },
             ].map(tab_ => (
               <button
                 key={tab_.key}
@@ -335,7 +328,8 @@ export default function TicketDetailPage() {
 
               {t.comments.length > 0 && (
                 <div className="space-y-3">
-                  {t.comments.map((comment) => (
+                  {/* FIX 1: Filter out internal notes for non-agents (customers) */}
+                  {t.comments.filter(comment => isAgent || !comment.is_internal).map((comment) => (
                     <div
                       key={comment.comment_id}
                       className={`card p-4 ${comment.is_internal ? 'border-yellow-200 bg-yellow-50' : ''}`}
@@ -428,22 +422,23 @@ export default function TicketDetailPage() {
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Response SLA</p>
-                  <SLATimer 
-                    dueAt={t.response_due_at} 
-                    createdAt={t.created_at} 
-                    status={t.status} 
+                  <SLATimer
+                    dueAt={t.response_due_at}
+                    createdAt={t.created_at}
+                    status={t.status}
                     label="Response SLA Met"
                     slaType="response"
                     firstResponseAt={getInProgressAt()}
                     isBreached={t.is_breached}
+                    
                   />
                 </div>
                 <div>
                   <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1.5">Resolution SLA</p>
-                  <SLATimer 
-                    dueAt={t.resolution_due_at} 
-                    createdAt={t.created_at} 
-                    status={t.status} 
+                  <SLATimer
+                    dueAt={t.resolution_due_at}
+                    createdAt={t.created_at}
+                    status={t.status}
                     label="Resolution SLA Met"
                     slaType="resolution"
                     resolvedAt={getResolvedAt()}

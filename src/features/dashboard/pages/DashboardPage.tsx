@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback } from 'react'
+import React, { useEffect, useState, useCallback, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Ticket, Clock, CheckCircle, AlertTriangle, TrendingUp,
@@ -29,6 +29,9 @@ const C = {
   orange: '#f97316', teal:   '#14b8a6', pink:   '#ec4899',
 }
 const PIE_COLORS = Object.values(C)
+
+// Backend hard cap on page_size is 100 — never exceed this
+const MY_TICKETS_PAGE_SIZE = 100
 
 function KpiCard({ label, value, sub, icon: Icon, color, bg, onClick }: {
   label: string; value: number | string; sub?: string
@@ -69,30 +72,28 @@ const EMPTY_FILTERS: SearchFilters = {
 }
 
 export default function DashboardPage() {
-  const navigate      = useNavigate()
-  const { user }      = useAuth()
+  const navigate    = useNavigate()
+  const { user }    = useAuth()
   const { list, total, isLoading, fetchMy, fetchAll } = useTickets()
-  const role          = user?.role || 'user'
-  const isPowerUser   = role === 'team_lead' || role === 'admin'
-  const isAdmin       = role === 'admin'
+  const role        = user?.role || 'user'
+  const isPowerUser = role === 'team_lead' || role === 'admin'
+  const isAgent     = role === 'support_agent'
+  const isAdmin     = role === 'admin'
 
   // ── Power-user tab state ─────────────────────────────────────────────────
   const [tab, setTab] = useState<'overview' | 'search' | 'reports'>('overview')
 
-  // ── Analytics via hook (replaces analyticsService.getDashboard + useEffect) ─
+  // ── Analytics (power users only) ─────────────────────────────────────────
   const { data: analyticsData, isLoading: anaLoading, isError: anaError, refetch: refetchAnalytics } = useAnalytics({ enabled: isPowerUser })
 
-  // ── Analytics filter state (for date/product queries) ────────────────────
   const [anaDateFrom, setAnaDateFrom] = useState('')
   const [anaDateTo,   setAnaDateTo]   = useState('')
   const [anaProduct,  setAnaProduct]  = useState('')
   const [showAnaFilter, setShowAnaFilter] = useState(false)
 
-  // Local analytics state — we keep a copy so we can apply user date/product filters via re-fetch if needed
   const [analytics, setAnalytics] = useState<DashboardData | null>(null)
   const [products, setProducts]   = useState<string[]>([])
 
-  // Sync hook data to local state
   useEffect(() => {
     if (analyticsData) {
       setAnalytics(analyticsData)
@@ -107,13 +108,25 @@ export default function DashboardPage() {
   const [srTotal,   setSrTotal]   = useState(0)
   const [srPage,    setSrPage]    = useState(1)
   const [srLoading, setSrLoading] = useState(false)
-  // User resolver for search tab assignee names
   const { cache: nameCache, resolve: resolveNames } = useUserResolver()
-
-  // ── Recent ticket search ─────────────────────────────────────────────────
   const [recentSearch, setRecentSearch] = useState('')
-
   const SR_PAGE_SIZE = 15
+
+  // ── Guard: only fetch once per role — prevents infinite loop on 4xx errors ──
+  const fetchedForRole = useRef<string | null>(null)
+
+  useEffect(() => {
+    // Skip if we already fetched for this role in this mount cycle
+    if (fetchedForRole.current === role) return
+    fetchedForRole.current = role
+
+    if (isPowerUser) {
+      fetchAll({ page: 1, page_size: 10 })
+    } else {
+      // page_size capped at 100 by backend (le=100) — never send more
+      fetchMy({ page: 1, page_size: MY_TICKETS_PAGE_SIZE })
+    }
+  }, [role])
 
   // ── Load search/filter tickets ───────────────────────────────────────────
   const loadSearchTickets = useCallback(async () => {
@@ -137,7 +150,6 @@ export default function DashboardPage() {
       }
       setSrTickets(items)
       setSrTotal(res.total)
-      // resolve names via hook
       const ids = [...new Set(items.map(t => t.assignee_id).filter((id): id is string => !!id))]
       if (ids.length) resolveNames(ids)
     } catch (e) {
@@ -147,12 +159,6 @@ export default function DashboardPage() {
     }
   }, [srPage, filters])
 
-  useEffect(() => {
-    const params = { page: 1, page_size: 10 }
-    if (isPowerUser) { fetchAll(params) }
-    else fetchMy(params)
-  }, [role])
-
   useEffect(() => { if (tab === 'search') loadSearchTickets() }, [tab, loadSearchTickets])
 
   // ── Derived values ───────────────────────────────────────────────────────
@@ -161,11 +167,16 @@ export default function DashboardPage() {
   const sla       = analytics?.sla_compliance
   const topAgents = analytics?.top_agents ?? []
 
-  const openCount      = list.filter(t => t.status === 'OPEN').length
-  const progressCount  = list.filter(t => t.status === 'IN_PROGRESS').length
-  const breachedCount  = list.filter(t => t.is_breached).length
-  const resolvedCount  = list.filter(t => t.status === 'RESOLVED').length
-  const escalatedCount = list.filter(t => t.is_escalated).length
+  // Counts derived from `list` — accurate because page_size=100 loads full dataset
+  // for users with ≤100 tickets. `total` from API is always the true total.
+  const openCount         = list.filter(t => t.status === 'OPEN').length
+  const progressCount     = list.filter(t => t.status === 'IN_PROGRESS').length
+  const breachedCount     = list.filter(t => t.is_breached).length
+  const resolvedCount     = list.filter(t => t.status === 'RESOLVED').length
+  const escalatedCount    = list.filter(t => t.is_escalated).length
+  const onHoldCount       = list.filter(t => t.status === 'ON_HOLD').length
+  const closedCount       = list.filter(t => t.status === 'CLOSED').length
+  const acknowledgedCount = list.filter(t => t.status === 'ACKNOWLEDGED').length
 
   const recentTickets = (recentSearch
     ? list.filter(t =>
@@ -194,10 +205,14 @@ export default function DashboardPage() {
         title={`Welcome back${user?.email ? ', ' + user.email.split('@')[0] : ''} 👋`}
         subtitle={isPowerUser ? 'Live analytics, search & reporting — all in one place' : "Here's what's happening with your tickets today"}
         actions={isPowerUser ? (
-          <button onClick={() => { fetchAll({ page: 1, page_size: 10 }); refetchAnalytics() }} className="btn-ghost p-2" title="Refresh all">
+          <button onClick={() => { fetchedForRole.current = null; fetchAll({ page: 1, page_size: 10 }); refetchAnalytics() }} className="btn-ghost p-2" title="Refresh all">
             <RefreshCw className="w-4 h-4" />
           </button>
-        ) : undefined}
+        ) : (
+          <button onClick={() => { fetchedForRole.current = null; fetchMy({ page: 1, page_size: MY_TICKETS_PAGE_SIZE }) }} className="btn-ghost p-2" title="Refresh">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        )}
       />
 
       {isPowerUser ? (
@@ -339,17 +354,6 @@ export default function DashboardPage() {
                         </PieChart>
                       </ResponsiveContainer>
                     </SectionCard>
-                    <SectionCard title="By Product">
-                      <ResponsiveContainer width="100%" height={200}>
-                        <BarChart data={productData} layout="vertical" barSize={14}>
-                          <CartesianGrid strokeDasharray="3 3" stroke="#f3f4f6" horizontal={false} />
-                          <XAxis type="number" tick={{ fontSize: 10 }} />
-                          <YAxis type="category" dataKey="name" tick={{ fontSize: 10 }} width={72} />
-                          <Tooltip formatter={(v: number) => [v, 'Tickets']} />
-                          <Bar dataKey="tickets" fill={C.violet} radius={[0, 4, 4, 0]} />
-                        </BarChart>
-                      </ResponsiveContainer>
-                    </SectionCard>
                   </div>
 
                   {topAgents.length > 0 && (
@@ -396,9 +400,9 @@ export default function DashboardPage() {
                 <SectionCard title="Admin Quick Links">
                   <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
                     {[
-                      { label: 'User Management', desc: 'Manage agents and tiers',       path: '/users',      icon: Users,      color: 'blue'   },
-                      { label: 'Team Management', desc: 'Configure teams & assignments',  path: '/teams',      icon: UserPlus,   color: 'indigo' },
-                      { label: 'SLA Config',      desc: 'SLA rules and thresholds',       path: '/sla-config', icon: ShieldAlert, color: 'violet' },
+                      { label: 'User Management', desc: 'Manage agents and tiers',      path: '/users',      icon: Users,       color: 'blue'   },
+                      { label: 'Team Management', desc: 'Configure teams & assignments', path: '/teams',      icon: UserPlus,    color: 'indigo' },
+                      { label: 'SLA Config',      desc: 'SLA rules and thresholds',      path: '/sla-config', icon: ShieldAlert, color: 'violet' },
                     ].map(({ label, desc, path, icon: Icon }) => (
                       <button key={path} onClick={() => navigate(path)} className="flex items-center gap-3 p-4 rounded-xl border border-gray-200 hover:border-violet-300 hover:bg-violet-50 transition-colors text-left">
                         <div className="p-3 rounded-lg bg-violet-100 text-violet-600"><Icon className="w-5 h-5" /></div>
@@ -447,9 +451,19 @@ export default function DashboardPage() {
                               <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
                               <p className="text-xs text-gray-400 mt-0.5">{ticket.product} · {ticket.environment}</p>
                             </td>
-                            <td className="px-4 py-3"><StatusBadge   status={ticket.status}     /></td>
+                            <td className="px-4 py-3"><StatusBadge status={ticket.status} /></td>
                             <td className="px-4 py-3"><div className="flex items-center gap-1.5"><PriorityBadge priority={ticket.priority} /><SeverityBadge severity={ticket.severity} /></div></td>
-                            <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                            <td className="px-4 py-3">
+                              <SLATimer
+                                responseDueAt={ticket.response_due_at}
+                                resolutionDueAt={ticket.resolution_due_at}
+                                status={ticket.status}
+                                isBreached={ticket.is_breached}
+                                  resolvedAt={ticket.resolved_at}
+                                 resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
+                                compact
+                              />
+                            </td>
                             <td className="px-4 py-3 text-xs text-gray-400">{formatRelative(ticket.updated_at)}</td>
                           </tr>
                         ))}
@@ -546,7 +560,16 @@ export default function DashboardPage() {
                                   ? <span className="font-medium text-gray-700">{nameCache[ticket.assignee_id] ?? `${ticket.assignee_id.slice(0, 8)}…`}</span>
                                   : <span className="text-amber-600 flex items-center gap-1"><UserCheck className="w-3 h-3" />Unassigned</span>}
                               </td>
-                              <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                              <td className="px-4 py-3">
+                                <SLATimer
+                                  responseDueAt={ticket.response_due_at}
+                                  resolutionDueAt={ticket.resolution_due_at}
+                                  status={ticket.status}
+                                  isBreached={ticket.is_breached}
+                                   resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
+                                  compact
+                                />
+                              </td>
                               <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatDate(ticket.created_at)}</td>
                             </tr>
                           ))
@@ -571,9 +594,9 @@ export default function DashboardPage() {
               {analytics && !anaLoading && (
                 <>
                   <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-                    <KpiCard label="Total"           value={summary!.total_tickets}    icon={Ticket}      color="text-blue-600"   bg="bg-blue-50"   />
-                    <KpiCard label="SLA Breached"    value={summary!.breached_tickets} icon={ShieldAlert} color="text-red-600"    bg="bg-red-50"    />
-                    <KpiCard label="Response SLA %"  value={sla ? formatPercent(sla.response_compliance_pct)   : '—'} icon={CheckCircle} color="text-green-600"  bg="bg-green-50"  />
+                    <KpiCard label="Total"            value={summary!.total_tickets}    icon={Ticket}      color="text-blue-600"   bg="bg-blue-50"   />
+                    <KpiCard label="SLA Breached"     value={summary!.breached_tickets} icon={ShieldAlert} color="text-red-600"    bg="bg-red-50"    />
+                    <KpiCard label="Response SLA %"   value={sla ? formatPercent(sla.response_compliance_pct)   : '—'} icon={CheckCircle} color="text-green-600"  bg="bg-green-50"  />
                     <KpiCard label="Resolution SLA %" value={sla ? formatPercent(sla.resolution_compliance_pct) : '—'} icon={CheckCircle} color="text-violet-600" bg="bg-violet-50" />
                   </div>
 
@@ -665,16 +688,31 @@ export default function DashboardPage() {
           )}
         </>
       ) : (
+        // ── CUSTOMER / AGENT VIEW ─────────────────────────────────────────
         <div className="space-y-6">
           <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-            <KpiCard label="Total Tickets" value={total || list.length} icon={Ticket}        color="text-blue-600"   bg="bg-blue-50"   />
-            <KpiCard label="Open"          value={openCount}            icon={Clock}          color="text-yellow-600" bg="bg-yellow-50" />
-            <KpiCard label="In Progress"   value={progressCount}        icon={Activity}       color="text-indigo-600" bg="bg-indigo-50" />
-            <KpiCard label="Resolved"      value={resolvedCount}        icon={CheckCircle}    color="text-green-600"  bg="bg-green-50"  />
-            <KpiCard label="SLA Breached"  value={breachedCount}        icon={ShieldAlert}    color="text-red-600"    bg="bg-red-50"    />
-            <KpiCard label="Escalated"     value={escalatedCount}       icon={AlertTriangle}  color="text-orange-600" bg="bg-orange-50" />
-            <KpiCard label="On Hold"       value={list.filter(t => t.status === 'ON_HOLD').length} icon={Clock} color="text-purple-600" bg="bg-purple-50" />
-            <KpiCard label="New"           value={list.filter(t => t.status === 'NEW').length}     icon={Zap}   color="text-teal-600"   bg="bg-teal-50"   />
+            {/* total from API is always accurate regardless of page_size */}
+            <KpiCard label="Total Tickets" value={total}         icon={Ticket}      color="text-blue-600"   bg="bg-blue-50"   />
+            <KpiCard label="Open"          value={openCount}     icon={Clock}       color="text-yellow-600" bg="bg-yellow-50" />
+            <KpiCard label="In Progress"   value={progressCount} icon={Activity}    color="text-indigo-600" bg="bg-indigo-50" />
+            <KpiCard label="Resolved"      value={resolvedCount} icon={CheckCircle} color="text-green-600"  bg="bg-green-50"  />
+            {isAgent ? (
+              // Agents see workload-relevant cards
+              <>
+                <KpiCard label="SLA Breached" value={breachedCount}  icon={ShieldAlert}   color="text-red-600"    bg="bg-red-50"    />
+                <KpiCard label="Escalated"    value={escalatedCount} icon={AlertTriangle} color="text-orange-600" bg="bg-orange-50" />
+                <KpiCard label="On Hold"      value={onHoldCount}    icon={Clock}         color="text-purple-600" bg="bg-purple-50" />
+                <KpiCard label="Closed"       value={closedCount}    icon={CheckCircle}   color="text-gray-600"   bg="bg-gray-100"  />
+              </>
+            ) : (
+              // Customers see their ticket lifecycle
+              <>
+                <KpiCard label="Acknowledged" value={acknowledgedCount} icon={Zap}         color="text-teal-600"   bg="bg-teal-50"   />
+                <KpiCard label="On Hold"      value={onHoldCount}       icon={Clock}       color="text-purple-600" bg="bg-purple-50" />
+                <KpiCard label="Closed"       value={closedCount}       icon={CheckCircle} color="text-gray-600"   bg="bg-gray-100"  />
+                <KpiCard label="SLA Breached" value={breachedCount}     icon={ShieldAlert} color="text-red-600"    bg="bg-red-50"    />
+              </>
+            )}
           </div>
 
           <SectionCard title="Recent Tickets" noPad
@@ -704,7 +742,16 @@ export default function DashboardPage() {
                         </td>
                         <td className="px-4 py-3"><StatusBadge status={ticket.status} /></td>
                         <td className="px-4 py-3"><div className="flex items-center gap-1.5"><PriorityBadge priority={ticket.priority} /><SeverityBadge severity={ticket.severity} /></div></td>
-                        <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                        <td className="px-4 py-3">
+                          <SLATimer
+                            responseDueAt={ticket.response_due_at}
+                            resolutionDueAt={ticket.resolution_due_at}
+                            status={ticket.status}
+                            isBreached={ticket.is_breached}
+                             resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
+                            compact
+                          />
+                        </td>
                         <td className="px-4 py-3 text-xs text-gray-400">{formatRelative(ticket.updated_at)}</td>
                       </tr>
                     ))}

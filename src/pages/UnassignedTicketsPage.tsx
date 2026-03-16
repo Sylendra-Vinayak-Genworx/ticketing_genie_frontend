@@ -284,6 +284,9 @@ export default function UnassignedTicketsPage() {
                         <SLATimer
                           dueAt={ticket.resolution_due_at}
                           status={ticket.status}
+                          isBreached={ticket.is_breached}
+                          resolvedAt={ticket.resolved_at}
+                          resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
                           compact
                         />
                       </td>

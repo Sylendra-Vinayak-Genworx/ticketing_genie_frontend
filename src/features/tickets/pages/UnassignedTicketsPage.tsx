@@ -125,7 +125,7 @@ export default function UnassignedTicketsPage() {
                         ? <span className="font-medium text-violet-700">{(ticket as any).team_id.slice(0, 8)}…</span>
                         : <span className="text-gray-300 italic">No team</span>}
                     </td>
-                    <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                    <td className="px-4 py-3"><SLATimer isBreached={ticket.is_breached} dueAt={ticket.resolution_due_at} status={ticket.status}  resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}  resolvedAt={ticket.resolved_at} compact /></td>
                     <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.created_at)}</td>
                     <td className="px-4 py-3">
                       <button onClick={e => { e.stopPropagation(); navigate(`/tickets/${ticket.ticket_id}`) }}
