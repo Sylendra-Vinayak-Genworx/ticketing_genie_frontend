@@ -196,11 +196,11 @@ export interface Ticket {
   response_due_at: string 
   resolution_due_at: string 
   is_breached: boolean
+  resolved_at?: string | null  
   is_escalated: boolean
   escalation_level: number
   hold_started_at: string | null
   total_hold_minutes: number
-  resolved_at: string | null
   closed_at: string | null
   created_at: string
   updated_at: string
@@ -217,6 +217,7 @@ export interface TicketBrief {
   severity: Severity
   priority: Priority
   environment: Environment
+  resolution_sla_completed_at?: string | null 
   product: string
   customer_id: string
   assignee_id: string | null
@@ -225,6 +226,7 @@ export interface TicketBrief {
   created_at: string
   updated_at: string
   resolution_due_at: string
+  resolved_at:string,
   escalation_level: number
   team_id?: string
   queue_type?: string

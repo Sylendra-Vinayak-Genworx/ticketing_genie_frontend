@@ -3,19 +3,21 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Ticket, PlusCircle, Users, BarChart2,
   ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
-  Tag, Shield, ClipboardList, ListOrdered, UsersRound,
+  Tag, Shield, ClipboardList, ListOrdered, UsersRound,CreditCardIcon
 } from 'lucide-react'
 import { cn } from '@/utils'
 import { useAuth } from '@/features/auth'
 import { Avatar } from '@/components/ui/Avatar'
 import { RoleBadge } from '@/components/ui/Badge'
 import { NotificationBell, useSSENotifications } from '@/features/notifications'
+import { Label } from 'recharts'
 
 const NAV_ITEMS = {
   user: [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'My Tickets', path: '/tickets',   icon: Ticket },
     { label: 'New Ticket', path: '/tickets/create', icon: PlusCircle },
+    { label: 'Subscription',path:'/subscription', icon:CreditCardIcon}
   ],
   support_agent: [
     { label: 'Dashboard',      path: '/dashboard',          icon: LayoutDashboard },
@@ -25,8 +27,7 @@ const NAV_ITEMS = {
   team_lead: [
     { label: 'Dashboard',        path: '/dashboard',            icon: LayoutDashboard },
     { label: 'Team Tickets',     path: '/tickets/team',         icon: UsersRound },
-    { label: 'Analytics',        path: '/analytics',            icon: BarChart2 },
-  ],
+    ],
   admin: [
     { label: 'Dashboard',     path: '/dashboard',         icon: LayoutDashboard },
     { label: 'All Tickets',   path: '/tickets',           icon: Ticket },
@@ -34,7 +35,7 @@ const NAV_ITEMS = {
     { label: 'Users',         path: '/users',             icon: Users },
     { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
     { label: 'Keyword Rules', path: '/keyword-rules',     icon: Tag },
-    { label: 'Analytics',     path: '/analytics',         icon: BarChart2 },
+    { label: 'Email Config',    path: '/email-config',      icon: ClipboardList },
   ],
 }
 

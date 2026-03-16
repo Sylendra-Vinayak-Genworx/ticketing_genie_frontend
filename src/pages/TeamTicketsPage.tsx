@@ -241,7 +241,7 @@ export default function TeamTicketsPage() {
                     <td className="px-4 py-3"><StatusBadge   status={ticket.status}     /></td>
                     <td className="px-4 py-3"><PriorityBadge priority={ticket.priority} /></td>
                     <td className="px-4 py-3"><SeverityBadge severity={ticket.severity} /></td>
-                    <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                    <td className="px-4 py-3"><SLATimer isBreached={ticket.is_breached} dueAt={ticket.resolution_due_at} status={ticket.status} compact  resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}/></td>
                     <td className="px-4 py-3 text-xs">
                       {ticket.assignee_id
                         ? <span className="font-medium text-gray-700">

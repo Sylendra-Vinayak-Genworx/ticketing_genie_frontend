@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react'
 import { UserCheck, Loader2, Search } from 'lucide-react'
 import { Modal } from '@/components/ui/Modal'
+import { useAuth } from '@/features/auth'
 import { authService } from '@/features/auth/services/authService'
 import { ticketService } from '@/features/tickets/services/ticketService'
 import type { User, TicketBrief } from '@/types'
@@ -13,23 +14,35 @@ interface AssignModalProps {
 }
 
 export function AssignModal({ ticket, currentAssigneeName, onClose, onAssigned }: AssignModalProps) {
-  const [agents,   setAgents]   = useState<User[]>([])
-  const [search,   setSearch]   = useState('')
-  const [selected, setSelected] = useState<string>('')
+  const { user } = useAuth()
+  const [agents,    setAgents]    = useState<User[]>([])
+  const [search,    setSearch]    = useState('')
+  const [selected,  setSelected]  = useState<string>('')
   const [isLoading, setIsLoading] = useState(false)
   const [isSaving,  setIsSaving]  = useState(false)
   const [error,     setError]     = useState<string | null>(null)
 
   const isReassign = !!ticket?.assignee_id
+  const role = user?.role
 
   useEffect(() => {
-    if (!ticket) return
+    if (!ticket || !user) return
     setSearch('')
     setSelected('')
     setError(null)
     setIsLoading(true)
-    authService.getAllUsers()
-      .then(users => setAgents(users.filter(u => u.role === 'support_agent' && u.is_active)))
+
+    const fetchAgents =
+      role === 'team_lead'
+        // Lead: only show agents from their own team
+        ? authService.getAgentsByLead(user.id)
+        // Admin: show all active support agents across all teams
+        : authService.getAllUsers().then(users =>
+            users.filter(u => u.role === 'support_agent' && u.is_active)
+          )
+
+    fetchAgents
+      .then(setAgents)
       .catch(() => setError('Failed to load agents'))
       .finally(() => setIsLoading(false))
   }, [ticket])
@@ -112,6 +125,10 @@ export function AssignModal({ ticket, currentAssigneeName, onClose, onAssigned }
               ))
           }
         </div>
+
+        <p className="text-xs text-gray-400">
+          {role === 'team_lead' ? 'Showing agents from your team only.' : 'Showing all active support agents.'}
+        </p>
       </div>
     </Modal>
   )

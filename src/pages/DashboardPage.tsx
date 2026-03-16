@@ -536,7 +536,7 @@ export default function DashboardPage() {
                                 <SeverityBadge severity={ticket.severity} />
                               </div>
                             </td>
-                            <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                            <td className="px-4 py-3"><SLATimer isBreached={ticket.is_breached} dueAt={ticket.resolution_due_at} status={ticket.status}   resolutionSlaCompletedAt={ticket.resolution_sla_completed_at} resolvedAt={ticket.resolved_at} compact /></td>
                             <td className="px-4 py-3 text-xs text-gray-400">{formatRelative(ticket.updated_at)}</td>
                           </tr>
                         ))}
@@ -663,7 +663,7 @@ export default function DashboardPage() {
                                   ? <span className="font-medium text-gray-700">{nameCache[ticket.assignee_id] ?? `${ticket.assignee_id.slice(0, 8)}…`}</span>
                                   : <span className="text-amber-600 flex items-center gap-1"><UserCheck className="w-3 h-3" />Unassigned</span>}
                               </td>
-                              <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                              <td className="px-4 py-3"><SLATimer isBreached={ticket.is_breached} dueAt={ticket.resolution_due_at} status={ticket.status}  resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}  resolvedAt={ticket.resolved_at} compact /></td>
                               <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatDate(ticket.created_at)}</td>
                             </tr>
                           ))
@@ -896,7 +896,7 @@ export default function DashboardPage() {
                             <SeverityBadge severity={ticket.severity} />
                           </div>
                         </td>
-                        <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} compact /></td>
+                        <td className="px-4 py-3"><SLATimer isBreached={ticket.is_breached} dueAt={ticket.resolution_due_at} status={ticket.status}  resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}  resolvedAt={ticket.resolved_at} compact /></td>
                         <td className="px-4 py-3 text-xs text-gray-400">{formatRelative(ticket.updated_at)}</td>
                       </tr>
                     ))}

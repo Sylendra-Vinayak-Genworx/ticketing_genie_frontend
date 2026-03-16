@@ -5,22 +5,25 @@ import { getMeThunk } from '@/features/auth/slices/authSlice'
 import { useAppDispatch } from '@/hooks'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
+import EmailConfigPage from '@/pages/Emailconfigpage'
+
 
 const LoginForm       = lazy(() => import('@/features/auth/components/LoginForm'))
 const SignupForm      = lazy(() => import('@/features/auth/components/SignupForm'))
-const DashboardPage   = lazy(() => import('@/pages/DashboardPage'))
-const TicketsListPage = lazy(() => import('@/pages/TicketsListPage'))
-const CreateTicketPage= lazy(() => import('@/pages/CreateTicketPage'))
-const TicketDetailPage= lazy(() => import('@/pages/TicketDetailPage'))
-const AnalyticsPage   = lazy(() => import('@/pages/AnalyticsPage'))
-const SLAConfigPage        = lazy(() => import('@/pages/SLAConfigPage'))
-const EscalatedTicketsPage   = lazy(() => import('@/pages/Escalatedticketspage'))
-const UnassignedTicketsPage  = lazy(() => import('@/pages/UnassignedTicketsPage'))
-const OpenQueuePage          = lazy(() => import('@/pages/OpenQueuePage'))
-const TeamTicketsPage        = lazy(() => import('@/pages/TeamTicketsPage'))
-const KeywordRulesPage= lazy(() => import('@/pages/KeywordRulesPage'))
-const UsersPage       = lazy(() => import('@/pages/UsersPage'))
-const TeamsPage       = lazy(() => import('@/pages/TeamsPage'))
+const DashboardPage        = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
+const TicketsListPage      = lazy(() => import('@/features/tickets/pages/TicketsListPage'))
+const CreateTicketPage     = lazy(() => import('@/features/tickets/pages/CreateTicketPage'))
+const TicketDetailPage     = lazy(() => import('@/pages/TicketDetailPage'))
+const AnalyticsPage        = lazy(() => import('@/features/analytics/pages/AnalyticsPage'))
+const SLAConfigPage        = lazy(() => import('@/features/sla/pages/SLAConfigPage'))
+const EscalatedTicketsPage = lazy(() => import('@/features/tickets/pages/EscalatedTicketsPage'))
+const UnassignedTicketsPage= lazy(() => import('@/features/tickets/pages/UnassignedTicketsPage'))
+const OpenQueuePage        = lazy(() => import('@/features/tickets/pages/OpenQueuePage'))
+const TeamTicketsPage      = lazy(() => import('@/features/tickets/pages/TeamTicketsPage'))
+const KeywordRulesPage     = lazy(() => import('@/features/keywords/pages/KeywordRulesPage'))
+const UsersPage            = lazy(() => import('@/features/users/pages/UsersPage'))
+const TeamsPage            = lazy(() => import('@/features/users/pages/TeamsPage'))
+const SubscriptionPage   =lazy(() =>import('@/features/subscription/pages/SubscriptionPage'))
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated } = useAuth()
@@ -95,6 +98,12 @@ export default function AppRoutes() {
                     } />
                     <Route path="/teams" element={
                       <RoleRoute roles={['admin']}><TeamsPage /></RoleRoute>
+                    } />
+                    <Route path="/subscription"       element={
+                      <RoleRoute roles={['user']}><SubscriptionPage /></RoleRoute>
+                    } />
+                    <Route path="/email-config" element={
+                      <RoleRoute roles={['admin']}><EmailConfigPage /></RoleRoute>
                     } />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>

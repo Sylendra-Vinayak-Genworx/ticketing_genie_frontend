@@ -79,7 +79,7 @@ export default function CreateTicketPage() {
     if (createTicketThunk.fulfilled.match(result as any)) {
       const ticket = (result as any).payload
       toast.success('Ticket created successfully!')
-      navigate(`/tickets/${ticket.ticket_id}`)
+      navigate(`/tickets/`)
     } else {
       toast.error((result as any).payload || 'Failed to create ticket')
     }

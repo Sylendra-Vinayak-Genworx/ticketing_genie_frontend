@@ -1,0 +1,1 @@
+import{r as o}from"./index-BAHu5-pl.js";import{u as f}from"./userService-BE3u3Jqu.js";function h(){const[t,s]=o.useState({}),a=o.useCallback(l=>{const c=l.filter(e=>!!e).filter(e=>!t[e]);c.length!==0&&c.forEach(e=>{f.getUserById(e).then(r=>s(n=>({...n,[e]:r.full_name||r.email}))).catch(()=>s(r=>({...r,[e]:e.slice(0,8)+"…"})))})},[t]);return{cache:t,resolve:a}}export{h as u};
