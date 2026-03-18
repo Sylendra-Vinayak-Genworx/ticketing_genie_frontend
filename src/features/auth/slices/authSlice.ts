@@ -75,12 +75,25 @@ export const getMeThunk = createAsyncThunk(
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 
-const storedToken = localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN)
+const storedToken  = localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN)
+const storedExpiry = localStorage.getItem(TOKEN_KEYS.TOKEN_EXPIRY)
+
+// Only treat the stored token as valid if it hasn't expired yet.
+// An expired token causes the middleware to immediately redirect to /dashboard
+// and then get bounced back to /login — clearing the stale values here
+// avoids that redirect loop entirely.
+const isTokenValid = !!storedToken && !!storedExpiry && Date.now() < Number(storedExpiry)
+
+if (!isTokenValid && storedToken) {
+  // Proactively clear stale tokens so the app starts from a clean slate
+  localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN)
+  localStorage.removeItem(TOKEN_KEYS.TOKEN_EXPIRY)
+}
 
 const initialState: AuthState = {
   user: null,
-  access_token: storedToken,
-  isAuthenticated: !!storedToken,
+  access_token: isTokenValid ? storedToken : null,
+  isAuthenticated: isTokenValid,
   isLoading: false,
   error: null,
 }

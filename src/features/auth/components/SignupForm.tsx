@@ -3,14 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import { Loader2, Zap } from 'lucide-react'
 import { useAuth } from '../hooks/useAuth'
 import toast from 'react-hot-toast'
-import type { UserRole } from '@/types'
-
-const ROLES: { value: UserRole; label: string }[] = [
-  { value: 'user', label: 'Customer' },
-  { value: 'support_agent', label: 'Support Agent' },
-  { value: 'team_lead', label: 'Team Lead' },
-  { value: 'admin', label: 'Admin' },
-]
 
 export default function SignupForm() {
   const navigate = useNavigate()
@@ -18,9 +10,9 @@ export default function SignupForm() {
 
   const [form, setForm] = useState({
     email: '',
+    full_name: '',
     password: '',
     confirmPassword: '',
-    role: 'user' as UserRole,
   })
   const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({})
 
@@ -28,6 +20,7 @@ export default function SignupForm() {
     const e: Partial<Record<keyof typeof form, string>> = {}
     if (!form.email.trim()) e.email = 'Required'
     else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email'
+    if (!form.full_name.trim()) e.full_name = 'Required'
     if (!form.password) e.password = 'Required'
     else if (form.password.length < 8) e.password = 'Min 8 chars'
     if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match'
@@ -38,7 +31,7 @@ export default function SignupForm() {
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
     if (!validate()) return
-    const result = await signup({ email: form.email, password: form.password, role: form.role })
+    const result = await signup({ email: form.email, password: form.password, role: 'user' })
     if ((result as any).payload?.user) {
       toast.success('Account created! Please sign in.')
       navigate('/login')
@@ -60,6 +53,18 @@ export default function SignupForm() {
 
         <div className="bg-white rounded-2xl shadow-2xl p-8">
           <form onSubmit={handleSubmit} className="space-y-4">
+            <div>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Full Name</label>
+              <input
+                type="text"
+                value={form.full_name}
+                onChange={(e) => setForm((f) => ({ ...f, full_name: e.target.value }))}
+                className={`input-field ${errors.full_name ? 'input-error' : ''}`}
+                placeholder="John Doe"
+              />
+              {errors.full_name && <p className="mt-1 text-xs text-red-600">{errors.full_name}</p>}
+            </div>
+
             <div>
               <label className="block text-sm font-medium text-gray-700 mb-1.5">Email</label>
               <input
@@ -94,19 +99,6 @@ export default function SignupForm() {
                 placeholder="Repeat password"
               />
               {errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>}
-            </div>
-
-            <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Role</label>
-              <select
-                value={form.role}
-                onChange={(e) => setForm((f) => ({ ...f, role: e.target.value as UserRole }))}
-                className="input-field"
-              >
-                {ROLES.map((r) => (
-                  <option key={r.value} value={r.value}>{r.label}</option>
-                ))}
-              </select>
             </div>
 
             <button type="submit" disabled={isLoading} className="btn-primary w-full justify-center py-2.5">

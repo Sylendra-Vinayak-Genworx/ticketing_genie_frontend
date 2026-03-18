@@ -112,6 +112,15 @@ export default function LoginForm() {
               {fieldErrors.password && (
                 <p className="mt-1 text-xs text-red-600">{fieldErrors.password}</p>
               )}
+              <div className="text-right mt-1">
+                <button
+                  type="button"
+                  onClick={() => navigate('/forgot-password')}
+                  className="text-xs text-blue-600 hover:text-blue-500 font-medium"
+                >
+                  Forgot password?
+                </button>
+              </div>
             </div>
 
             <button type="submit" disabled={isLoading} className="btn-primary w-full justify-center py-2.5 text-base">

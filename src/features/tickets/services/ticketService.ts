@@ -16,9 +16,30 @@ export interface AreaOfConcern {
   name: string
 }
 
+export interface AttachmentUploadResponse {
+  file_url: string
+  file_name: string
+  blob_path: string
+}
+
 export const ticketService = {
   async createTicket(data: CreateTicketRequest): Promise<Ticket> {
     const res = await ticketingApi.post<Ticket>('/tickets', data)
+    return res.data
+  },
+
+  /**
+   * Upload a single file to GCS via the backend.
+   * Returns the public file_url to include in the ticket's attachments list.
+   */
+  async uploadAttachment(file: File): Promise<AttachmentUploadResponse> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await ticketingApi.post<AttachmentUploadResponse>(
+      '/tickets/attachments/upload',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
     return res.data
   },
 

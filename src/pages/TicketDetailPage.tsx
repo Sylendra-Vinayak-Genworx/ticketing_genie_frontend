@@ -36,7 +36,7 @@ export default function TicketDetailPage() {
   const { currentTicket, isLoadingDetail, isSubmitting, fetchById, updateStatus, addComment, assign } = useTickets()
 
   const role = user?.role || 'user'
-  const isAgent = role === 'support_agent' || role === 'team_lead' || role === 'admin'
+  const isAgent = role === 'support_agent' 
 
   // Comment form
   const [commentBody, setCommentBody]       = useState('')
@@ -285,7 +285,7 @@ export default function TicketDetailPage() {
             </button>
           )}
 
-          {(role === 'team_lead' || role === 'admin') && (
+          {role === 'team_lead' && (
             <button onClick={openAssignModal} className="btn-secondary">
               <UserCheck className="w-4 h-4" /> Assign
             </button>
@@ -344,12 +344,12 @@ export default function TicketDetailPage() {
                 <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">{t.description}</p>
               </div>
 
-              {t.comments.length > 0 && (
+              {t.comments.filter((c: any) => isAgent || !c.is_internal).length > 0 && (
                 <div className="space-y-3">
                   {t.comments.filter((comment: any) => isAgent || !comment.is_internal).map((comment: any) => (
                     <div
                       key={comment.comment_id}
-                      className={`card p-4 ${comment.is_internal ? 'border-yellow-200 bg-yellow-50' : ''}`}
+                      className={`card p-4 ${isAgent && comment.is_internal ? 'border-yellow-200 bg-yellow-50' : ''}`}
                     >
                       <div className="flex items-start gap-3">
                         <Avatar name={comment.author_id} size="sm" />
@@ -357,7 +357,7 @@ export default function TicketDetailPage() {
                           <div className="flex items-center gap-2 flex-wrap">
                             <span className="text-sm font-semibold text-gray-900">{comment.author_id.slice(0, 12)}…</span>
                             <span className="text-xs text-gray-400">{comment.author_role.replace('_', ' ')}</span>
-                            {comment.is_internal && <span className="badge bg-yellow-100 text-yellow-700">Internal Note</span>}
+                            {isAgent && comment.is_internal && <span className="badge bg-yellow-100 text-yellow-700">Internal Note</span>}
                             {comment.triggers_hold && <span className="badge bg-gray-100 text-gray-700">⏸ Paused SLA</span>}
                             {comment.triggers_resume && <span className="badge bg-green-100 text-green-700">▶ Resumed SLA</span>}
                             <span className="text-xs text-gray-400 ml-auto">{formatRelative(comment.created_at)}</span>

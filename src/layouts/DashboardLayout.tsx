@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Ticket, PlusCircle, Users, BarChart2,
   ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
-  Tag, Shield, ClipboardList, ListOrdered, UsersRound,CreditCardIcon
+  Tag, Shield, ClipboardList, ListOrdered, UsersRound, CreditCardIcon, Package
 } from 'lucide-react'
 import { cn } from '@/utils'
 import { useAuth } from '@/features/auth'
@@ -16,7 +16,6 @@ const NAV_ITEMS = {
   user: [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
     { label: 'My Tickets', path: '/tickets',   icon: Ticket },
-    { label: 'New Ticket', path: '/tickets/create', icon: PlusCircle },
     { label: 'Subscription',path:'/subscription', icon:CreditCardIcon}
   ],
   support_agent: [
@@ -33,9 +32,10 @@ const NAV_ITEMS = {
     { label: 'All Tickets',   path: '/tickets',           icon: Ticket },
     { label: 'Teams',         path: '/teams',             icon: UsersRound },
     { label: 'Users',         path: '/users',             icon: Users },
+    { label: 'Products',      path: '/products',          icon: Package },
     { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
     { label: 'Keyword Rules', path: '/keyword-rules',     icon: Tag },
-    { label: 'Email Config',    path: '/email-config',      icon: ClipboardList },
+    { label: 'Email Config',  path: '/email-config',      icon: ClipboardList },
   ],
 }
 
@@ -129,15 +129,6 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
       <div className="flex-1" />
       <div className="flex items-center gap-2">
         <NotificationBell />
-        {user && (
-          <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-gray-50 cursor-pointer">
-            <Avatar name={user.email} size="sm" />
-            <span className="hidden sm:block text-sm font-medium text-gray-700 max-w-[140px] truncate">
-              {user.email}
-            </span>
-            <ChevronDown className="w-3.5 h-3.5 text-gray-400" />
-          </div>
-        )}
       </div>
     </header>
   )
@@ -145,7 +136,7 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   const [sidebarOpen, setSidebarOpen] = useState(false)
-  useSSENotifications()   // open SSE connection for the session
+  useSSENotifications()   
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />

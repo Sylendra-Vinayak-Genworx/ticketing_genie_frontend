@@ -694,15 +694,16 @@ export default function DashboardPage() {
             {/* total from API is always accurate regardless of page_size */}
             <KpiCard label="Total Tickets" value={total}         icon={Ticket}      color="text-blue-600"   bg="bg-blue-50"   />
             <KpiCard label="Open"          value={openCount}     icon={Clock}       color="text-yellow-600" bg="bg-yellow-50" />
-            <KpiCard label="In Progress"   value={progressCount} icon={Activity}    color="text-indigo-600" bg="bg-indigo-50" />
+            <KpiCard label="Closed"       value={closedCount}    icon={CheckCircle}   color="text-gray-600"   bg="bg-gray-100"  />
+          
             <KpiCard label="Resolved"      value={resolvedCount} icon={CheckCircle} color="text-green-600"  bg="bg-green-50"  />
             {isAgent ? (
               // Agents see workload-relevant cards
               <>
                 <KpiCard label="SLA Breached" value={breachedCount}  icon={ShieldAlert}   color="text-red-600"    bg="bg-red-50"    />
                 <KpiCard label="Escalated"    value={escalatedCount} icon={AlertTriangle} color="text-orange-600" bg="bg-orange-50" />
-                <KpiCard label="On Hold"      value={onHoldCount}    icon={Clock}         color="text-purple-600" bg="bg-purple-50" />
-                <KpiCard label="Closed"       value={closedCount}    icon={CheckCircle}   color="text-gray-600"   bg="bg-gray-100"  />
+                <KpiCard label="On Hold"      value={onHoldCount}    icon={Clock}         color="text-purple-600" bg="bg-purple-50" />  
+                <KpiCard label="In Progress"   value={progressCount} icon={Activity}    color="text-indigo-600" bg="bg-indigo-50" />
               </>
             ) : (
               // Customers see their ticket lifecycle

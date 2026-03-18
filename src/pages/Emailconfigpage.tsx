@@ -397,36 +397,6 @@ export default function EmailConfigPage() {
         </div>
       </div>
 
-      {/* Test Email */}
-      <div className="card p-5">
-        <div className="flex items-center gap-3 mb-4">
-          <div className="p-2 bg-green-100 rounded-lg">
-            <TestTube2 className="w-5 h-5 text-green-600" />
-          </div>
-          <div>
-            <h3 className="font-semibold text-gray-900">Test Configuration</h3>
-            <p className="text-xs text-gray-500">Send a test email to verify your settings</p>
-          </div>
-        </div>
-
-        <div className="flex gap-3">
-          <input
-            type="email"
-            value={testEmail}
-            onChange={(e) => setTestEmail(e.target.value)}
-            className="input-field flex-1"
-            placeholder="Enter email to receive test notification"
-          />
-          <button
-            onClick={handleTest}
-            disabled={testing || !testEmail}
-            className="btn-secondary flex items-center gap-2"
-          >
-            {testing ? <Loader2 className="w-4 h-4 animate-spin" /> : <TestTube2 className="w-4 h-4" />}
-            Send Test
-          </button>
-        </div>
-      </div>
 
       {/* Save Button */}
       <div className="flex items-center justify-between p-4 bg-gray-50 rounded-xl border border-gray-200">
@@ -451,10 +421,8 @@ export default function EmailConfigPage() {
           <div className="text-sm text-blue-900">
             <p className="font-semibold mb-2">Security Notes</p>
             <ul className="list-disc list-inside space-y-1 text-blue-800">
-              <li>Passwords are encrypted before storage using industry-standard encryption</li>
               <li>Use app-specific passwords from your email provider (not your regular password)</li>
               <li>For Gmail: Enable 2FA, then generate an app password in Security settings</li>
-              <li>Password fields are never returned from the API for security</li>
             </ul>
           </div>
         </div>
