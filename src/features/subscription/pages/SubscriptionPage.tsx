@@ -1,12 +1,7 @@
-import React, { useEffect, useState } from 'react'
+import React from 'react'
 import { CheckCircle, Loader2, RefreshCw } from 'lucide-react'
-import { useAuth } from '@/features/auth'
-import { useAppDispatch } from '@/hooks'
-import { getMeThunk } from '@/features/auth/slices/authSlice'
-import { authService } from '@/features/auth/services/authService'
-import { tierService, CustomerTier } from '@/features/tickets/services/tierService'
 import { PageHeader } from '@/components/common/PageHeader'
-import toast from 'react-hot-toast'
+import { useSubscription } from '../hooks/useSubscription'
 
 // Colour palette per position — index 0,1,2,3 maps to tiers in DB order
 const PALETTE = [
@@ -21,48 +16,11 @@ function getPalette(index: number) {
 }
 
 export default function SubscriptionPage() {
-  const { user }   = useAuth()
-  const dispatch   = useAppDispatch()
-
-  const [tiers,      setTiers]      = useState<CustomerTier[]>([])
-  const [isLoading,  setIsLoading]  = useState(true)
-  const [saving,     setSaving]     = useState<number | null>(null)
-  const [confirm,    setConfirm]    = useState<CustomerTier | null>(null)
-
-  const currentTierId = user?.customer_tier_id ?? null
-
-  async function loadTiers() {
-    setIsLoading(true)
-    try {
-      const data = await tierService.listTiers()
-      setTiers(data)
-    } catch {
-      toast.error('Failed to load plans')
-    } finally {
-      setIsLoading(false)
-    }
-  }
-
-  useEffect(() => { loadTiers() }, [])
-
-  async function applyTier(tier: CustomerTier) {
-    if (!user || tier.tier_id === currentTierId) return
-    setSaving(tier.tier_id)
-    setConfirm(null)
-    try {
-      // 1. Persist to auth service
-      await authService.updateUser(user.id, { customer_tier_id: tier.tier_id })
-      // 2. Re-fetch the current user so Redux state reflects the new tier instantly
-      await dispatch(getMeThunk())
-      toast.success(`Switched to ${tier.name}`)
-    } catch {
-      toast.error('Failed to switch plan. Please try again.')
-    } finally {
-      setSaving(null)
-    }
-  }
-
-  const currentTier = tiers.find(t => t.tier_id === currentTierId)
+  const {
+    tiers, isLoading, saving, confirm, setConfirm,
+    currentTierId, currentTier,
+    loadTiers, applyTier,
+  } = useSubscription()
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -123,14 +81,12 @@ export default function SubscriptionPage() {
                   }
                 `}
               >
-                {/* Current badge */}
                 {isCurrent && (
                   <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold bg-white border border-gray-200 shadow-sm text-gray-700 whitespace-nowrap">
                     ✓ Current Plan
                   </span>
                 )}
 
-                {/* Name & description */}
                 <div className="mt-2 mb-4">
                   <h3 className="text-lg font-bold text-gray-900">{tier.name}</h3>
                   {tier.description ? (
@@ -140,13 +96,9 @@ export default function SubscriptionPage() {
                   )}
                 </div>
 
-                {/* Divider */}
                 <div className="border-t border-gray-100 my-2" />
-
-                {/* Spacer so button always at bottom */}
                 <div className="flex-1" />
 
-                {/* Action button */}
                 <button
                   onClick={() => isCurrent ? null : setConfirm(tier)}
                   disabled={isCurrent || isSaving}
@@ -195,16 +147,10 @@ export default function SubscriptionPage() {
               </div>
             )}
             <div className="flex gap-3 pt-1">
-              <button
-                onClick={() => setConfirm(null)}
-                className="flex-1 btn-secondary"
-              >
+              <button onClick={() => setConfirm(null)} className="flex-1 btn-secondary">
                 Cancel
               </button>
-              <button
-                onClick={() => applyTier(confirm)}
-                className="flex-1 btn-primary"
-              >
+              <button onClick={() => applyTier(confirm)} className="flex-1 btn-primary">
                 Confirm
               </button>
             </div>
