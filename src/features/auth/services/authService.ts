@@ -98,4 +98,15 @@ export const authService = {
     const res = await ticketingApi.put<AgentSkillListResponse>(`/admin/users/${userId}/skills`, data)
     return res.data
   },
+
+  // ── Password Reset ────────────────────────────────────────────────────
+  async forgotPassword(email: string): Promise<{ message: string }> {
+    const res = await authApi.post<{ message: string }>('/auth/forgot-password', { email })
+    return res.data
+  },
+
+  async resetPassword(token: string, new_password: string): Promise<{ message: string }> {
+    const res = await authApi.post<{ message: string }>('/auth/reset-password', { token, new_password })
+    return res.data
+  },
 }

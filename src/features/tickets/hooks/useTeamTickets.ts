@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react'
 import { useAuth } from '@/features/auth'
 import { ticketService } from '../services/ticketService'
 import { userService } from '@/features/users/services/userService'
-import type { TicketBrief, TicketStatus, Severity, Priority } from '@/types'
+import type { TicketBrief, TicketStatus, Severity, Priority, User } from '@/types'
 
 export interface TeamTicketFilters {
   status: TicketStatus | ''
@@ -10,6 +10,7 @@ export interface TeamTicketFilters {
   priority: Priority | ''
   search: string
   quickFilter: 'all' | 'unassigned' | 'escalated'
+  assigneeId: string
 }
 
 const PAGE_SIZE = 20
@@ -17,15 +18,31 @@ const PAGE_SIZE = 20
 export function useTeamTickets() {
   const { user } = useAuth()
   const teamId = (user as any)?.team_id as string | undefined
+  const leadId = user?.id
 
   const [tickets, setTickets]     = useState<TicketBrief[]>([])
   const [total, setTotal]         = useState(0)
   const [page, setPage]           = useState(1)
   const [isLoading, setIsLoading] = useState(false)
   const [nameCache, setNameCache] = useState<Record<string, string>>({})
+  const [teamAgents, setTeamAgents] = useState<User[]>([])
   const [filters, setFilters]     = useState<TeamTicketFilters>({
-    status: '', severity: '', priority: '', search: '', quickFilter: 'all',
+    status: '', severity: '', priority: '', search: '', quickFilter: 'all', assigneeId: '',
   })
+
+  // Load agents belonging to this team lead once on mount
+  useEffect(() => {
+    if (!leadId) return
+    userService.getAgentsByLead(leadId)
+      .then(agents => {
+        setTeamAgents(agents)
+        // Pre-populate the name cache with team agents
+        const entries: Record<string, string> = {}
+        agents.forEach(a => { entries[a.id] = a.full_name || a.email })
+        setNameCache(prev => ({ ...prev, ...entries }))
+      })
+      .catch(err => console.error('Failed to load team agents', err))
+  }, [leadId])
 
   const load = useCallback(async () => {
     setIsLoading(true)
@@ -34,9 +51,10 @@ export function useTeamTickets() {
       const params: Record<string, any> = {
         page,
         page_size: PAGE_SIZE,
-        ...(teamId             && { team_id:  teamId }),
-        ...(filters.severity   && { severity: filters.severity }),
-        ...(filters.priority   && { priority: filters.priority }),
+        ...(teamId              && { team_id:    teamId }),
+        ...(filters.severity    && { severity:   filters.severity }),
+        ...(filters.priority    && { priority:   filters.priority }),
+        ...(filters.assigneeId  && { assignee_id: filters.assigneeId }),
       }
 
       if (filters.quickFilter === 'unassigned') {
@@ -77,7 +95,7 @@ export function useTeamTickets() {
     } finally {
       setIsLoading(false)
     }
-  }, [page, filters.status, filters.severity, filters.priority, filters.quickFilter, teamId])
+  }, [page, filters.status, filters.severity, filters.priority, filters.quickFilter, filters.assigneeId, teamId])
 
   useEffect(() => { load() }, [load])
 
@@ -92,6 +110,7 @@ export function useTeamTickets() {
     tickets: displayed,
     total, page, setPage, isLoading,
     nameCache,
+    teamAgents,
     filters, setFilters,
     refetch: load,
   }

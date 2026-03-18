@@ -94,5 +94,7 @@ function addRefreshInterceptor(instance: typeof ticketingApi) {
   )
 }
 
+// The refresh interceptor must ONLY be applied to the ticketing API.
+// Attaching it to authApi would cause login/refresh failures to trigger
+// a recursive refresh loop, which logs the user out on every failed login attempt.
 addRefreshInterceptor(ticketingApi)
-addRefreshInterceptor(authApi)

@@ -10,6 +10,8 @@ import EmailConfigPage from '@/pages/Emailconfigpage'
 
 const LoginForm       = lazy(() => import('@/features/auth/components/LoginForm'))
 const SignupForm      = lazy(() => import('@/features/auth/components/SignupForm'))
+const ForgotPasswordForm = lazy(() => import('@/features/auth/components/ForgotPasswordForm'))
+const ResetPasswordForm  = lazy(() => import('@/features/auth/components/ResetPasswordForm'))
 const DashboardPage        = lazy(() => import('@/features/dashboard/pages/DashboardPage'))
 const TicketsListPage      = lazy(() => import('@/features/tickets/pages/TicketsListPage'))
 const CreateTicketPage     = lazy(() => import('@/features/tickets/pages/CreateTicketPage'))
@@ -23,6 +25,7 @@ const TeamTicketsPage      = lazy(() => import('@/features/tickets/pages/TeamTic
 const KeywordRulesPage     = lazy(() => import('@/features/keywords/pages/KeywordRulesPage'))
 const UsersPage            = lazy(() => import('@/features/users/pages/UsersPage'))
 const TeamsPage            = lazy(() => import('@/features/users/pages/TeamsPage'))
+const ProductsPage         = lazy(() => import('@/features/product/pages/ProductsPage'))
 const SubscriptionPage   =lazy(() =>import('@/features/subscription/pages/SubscriptionPage'))
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
@@ -60,6 +63,8 @@ export default function AppRoutes() {
         <Routes>
           <Route path="/login"  element={<PublicOnlyRoute><LoginForm /></PublicOnlyRoute>} />
           <Route path="/signup" element={<PublicOnlyRoute><SignupForm /></PublicOnlyRoute>} />
+          <Route path="/forgot-password" element={<PublicOnlyRoute><ForgotPasswordForm /></PublicOnlyRoute>} />
+          <Route path="/reset-password"  element={<PublicOnlyRoute><ResetPasswordForm /></PublicOnlyRoute>} />
           <Route path="/" element={<Navigate to="/dashboard" replace />} />
 
           <Route path="/*" element={
@@ -98,6 +103,9 @@ export default function AppRoutes() {
                     } />
                     <Route path="/teams" element={
                       <RoleRoute roles={['admin']}><TeamsPage /></RoleRoute>
+                    } />
+                    <Route path="/products" element={
+                      <RoleRoute roles={['admin']}><ProductsPage /></RoleRoute>
                     } />
                     <Route path="/subscription"       element={
                       <RoleRoute roles={['user']}><SubscriptionPage /></RoleRoute>

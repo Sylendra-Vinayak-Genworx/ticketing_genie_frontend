@@ -2,7 +2,7 @@ import React, { useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   UsersRound, RefreshCw, Search, AlertTriangle,
-  Clock, CheckCircle2, UserCheck, UserPlus, UserCog,
+  Clock, CheckCircle2, UserCheck, UserPlus, User,
 } from 'lucide-react'
 import { useTeamTickets } from '@/features/tickets/hooks/useTeamTickets'
 import { PageHeader } from '@/components/common/PageHeader'
@@ -55,7 +55,7 @@ function GroupDivider({ label, count, className }: { label: string; count: numbe
 
 export default function TeamTicketsPage() {
   const navigate = useNavigate()
-  const { tickets, total, page, setPage, isLoading, nameCache, filters, setFilters, refetch } = useTeamTickets()
+  const { tickets, total, page, setPage, isLoading, nameCache, teamAgents, filters, setFilters, refetch } = useTeamTickets()
   const [assignTarget, setAssignTarget] = useState<TicketBrief | null>(null)
 
   // ── Stats ─────────────────────────────────────────────────────────────────
@@ -65,7 +65,7 @@ export default function TeamTicketsPage() {
   const resolvedCount  = tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length
 
   // ── Grouped sections (only when no quick filter / status filter) ──────────
-  const isFiltered = filters.quickFilter !== 'all' || !!filters.status || !!filters.severity || !!filters.priority || !!filters.search
+  const isFiltered = filters.quickFilter !== 'all' || !!filters.status || !!filters.severity || !!filters.priority || !!filters.search || !!filters.assigneeId
   const escalatedGroup = tickets.filter(t => t.is_escalated)
   const unclaimedGroup = tickets.filter(t => isUnclaimed(t) && !t.is_escalated)
   const assignedGroup  = tickets.filter(t => t.assignee_id && !t.is_escalated)
@@ -232,6 +232,19 @@ export default function TeamTicketsPage() {
               Clear filter
             </button>
           )}
+          {filters.assigneeId && (
+            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border bg-violet-100 text-violet-700 border-violet-300 shadow-sm">
+              <User className="w-3.5 h-3.5" />
+              {teamAgents.find(a => a.id === filters.assigneeId)?.full_name
+                || teamAgents.find(a => a.id === filters.assigneeId)?.email
+                || 'Agent'}
+              <button
+                onClick={() => { setFilters(f => ({ ...f, assigneeId: '' })); setPage(1) }}
+                className="ml-1 hover:text-violet-900 font-bold leading-none"
+                title="Clear assignee filter"
+              >×</button>
+            </span>
+          )}
         </div>
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[220px]">
@@ -257,6 +270,19 @@ export default function TeamTicketsPage() {
             className="input-field w-auto min-w-[120px]">
             <option value="">All Priorities</option>
             {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+          </select>
+          <select
+            value={filters.assigneeId}
+            onChange={e => { setFilters(f => ({ ...f, assigneeId: e.target.value })); setPage(1) }}
+            className="input-field w-auto min-w-[160px]"
+            disabled={filters.quickFilter === 'unassigned'}
+          >
+            <option value="">All Agents</option>
+            {teamAgents.map(agent => (
+              <option key={agent.id} value={agent.id}>
+                {agent.full_name || agent.email}
+              </option>
+            ))}
           </select>
         </div>
       </div>

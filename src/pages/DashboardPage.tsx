@@ -262,12 +262,12 @@ export default function DashboardPage() {
             <div className="space-y-5">
               {/* Analytics filter strip */}
               <div className="card p-3">
-                <div className="flex items-center gap-2 flex-wrap">
+                <div className="flex items-center gap-2 flex-wrap none">
                   <button onClick={() => setShowAnaFilter(!showAnaFilter)}
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
                       showAnaFilter ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white text-gray-600 border-gray-200 hover:border-violet-200'
                     }`}>
-                    <Filter className="w-3.5 h-3.5" /> Date & Product Filter
+                    <Filter className="w-3.5 h-3.5 none" /> Date & Product Filter
                   </button>
                   {(anaDateFrom || anaDateTo || anaProduct) && (
                     <button onClick={() => { setAnaDateFrom(''); setAnaDateTo(''); setAnaProduct('') }}
