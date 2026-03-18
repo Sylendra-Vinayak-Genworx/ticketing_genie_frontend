@@ -15,7 +15,6 @@ import type { User, UserUpdateRequest, UserCreateRequest, AgentSkill, UserRole }
 
 const STAFF_ROLES = ['admin', 'team_lead', 'support_agent']
 const ROLE_OPTIONS = [
-  { value: 'admin',         label: 'Admin'         },
   { value: 'team_lead',     label: 'Team Lead'     },
   { value: 'support_agent', label: 'Support Agent' },
 ]

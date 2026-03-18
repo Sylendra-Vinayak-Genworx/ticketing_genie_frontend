@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useCallback, useRef } from 'react'
+import React, { useEffect, useState, useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import {
   Ticket, Clock, CheckCircle, AlertTriangle, TrendingUp,
@@ -12,15 +12,15 @@ import {
 import { useAuth } from '@/features/auth'
 import { useTickets } from '@/features/tickets/hooks/useTickets'
 import { useAnalytics } from '@/features/analytics/hooks/useAnalytics'
-import { useUserResolver } from '@/features/tickets/hooks/useUserResolver'
-import { ticketService } from '@/features/tickets/services/ticketService'
+import { useDashboardSearch } from '@/features/dashboard/hooks/useDashboardSearch'
+import { EMPTY_FILTERS } from '@/features/dashboard/hooks/useDashboardSearch'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
 import { SLATimer } from '@/components/ui/SLATimer'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Pagination } from '@/components/common/Pagination'
 import { formatRelative, formatMinutes, formatPercent, formatDate } from '@/utils'
-import type { DashboardData, TicketBrief, TicketStatus, Severity, Priority } from '@/types'
+import type { DashboardData, TicketStatus, Severity, Priority } from '@/types'
 import { TICKET_STATUSES, SEVERITIES, PRIORITIES } from '@/config/constants'
 
 const C = {
@@ -30,7 +30,6 @@ const C = {
 }
 const PIE_COLORS = Object.values(C)
 
-// Backend hard cap on page_size is 100 — never exceed this
 const MY_TICKETS_PAGE_SIZE = 100
 
 function KpiCard({ label, value, sub, icon: Icon, color, bg, onClick }: {
@@ -63,14 +62,6 @@ function SectionCard({ title, action, children, noPad }: {
   )
 }
 
-interface SearchFilters {
-  search: string; status: TicketStatus | ''; priority: Priority | ''
-  severity: Severity | ''; product: string; date_from: string; date_to: string
-}
-const EMPTY_FILTERS: SearchFilters = {
-  search: '', status: '', priority: '', severity: '', product: '', date_from: '', date_to: '',
-}
-
 export default function DashboardPage() {
   const navigate    = useNavigate()
   const { user }    = useAuth()
@@ -84,12 +75,15 @@ export default function DashboardPage() {
   const [tab, setTab] = useState<'overview' | 'search' | 'reports'>('overview')
 
   // ── Analytics (power users only) ─────────────────────────────────────────
-  const { data: analyticsData, isLoading: anaLoading, isError: anaError, refetch: refetchAnalytics } = useAnalytics({ enabled: isPowerUser })
-
   const [anaDateFrom, setAnaDateFrom] = useState('')
   const [anaDateTo,   setAnaDateTo]   = useState('')
-  const [anaProduct,  setAnaProduct]  = useState('')
   const [showAnaFilter, setShowAnaFilter] = useState(false)
+
+  const { data: analyticsData, isLoading: anaLoading, isError: anaError, refetch: refetchAnalytics } = useAnalytics({
+    enabled: isPowerUser,
+    date_from: anaDateFrom || undefined,
+    date_to: anaDateTo || undefined,
+  })
 
   const [analytics, setAnalytics] = useState<DashboardData | null>(null)
   const [products, setProducts]   = useState<string[]>([])
@@ -102,15 +96,14 @@ export default function DashboardPage() {
     }
   }, [analyticsData])
 
-  // ── Search tab state ─────────────────────────────────────────────────────
-  const [filters,   setFilters]   = useState<SearchFilters>(EMPTY_FILTERS)
-  const [srTickets, setSrTickets] = useState<TicketBrief[]>([])
-  const [srTotal,   setSrTotal]   = useState(0)
-  const [srPage,    setSrPage]    = useState(1)
-  const [srLoading, setSrLoading] = useState(false)
-  const { cache: nameCache, resolve: resolveNames } = useUserResolver()
+
+  const {
+    filters, setFilters,
+    srTickets, srTotal, srPage, setSrPage,
+    srLoading, nameCache: srNameCache, hasFilters,
+    SR_PAGE_SIZE,
+  } = useDashboardSearch(tab)
   const [recentSearch, setRecentSearch] = useState('')
-  const SR_PAGE_SIZE = 15
 
   // ── Guard: only fetch once per role — prevents infinite loop on 4xx errors ──
   const fetchedForRole = useRef<string | null>(null)
@@ -128,38 +121,7 @@ export default function DashboardPage() {
     }
   }, [role])
 
-  // ── Load search/filter tickets ───────────────────────────────────────────
-  const loadSearchTickets = useCallback(async () => {
-    setSrLoading(true)
-    setSrTickets([])
-    try {
-      const params: Record<string, any> = {
-        page: srPage, page_size: SR_PAGE_SIZE,
-        ...(filters.status   && { status:   filters.status   }),
-        ...(filters.priority && { priority: filters.priority }),
-        ...(filters.severity && { severity: filters.severity }),
-        ...(filters.product  && { product:  filters.product  }),
-      }
-      const res  = await ticketService.getAllTickets(params)
-      let items  = res.items
-      if (filters.search) {
-        const q = filters.search.toLowerCase()
-        items = items.filter(t =>
-          t.ticket_number.toLowerCase().includes(q) ||
-          t.title.toLowerCase().includes(q))
-      }
-      setSrTickets(items)
-      setSrTotal(res.total)
-      const ids = [...new Set(items.map(t => t.assignee_id).filter((id): id is string => !!id))]
-      if (ids.length) resolveNames(ids)
-    } catch (e) {
-      console.error(e)
-    } finally {
-      setSrLoading(false)
-    }
-  }, [srPage, filters])
-
-  useEffect(() => { if (tab === 'search') loadSearchTickets() }, [tab, loadSearchTickets])
+  // loadSearchTickets is now handled by useDashboardSearch hook
 
   // ── Derived values ───────────────────────────────────────────────────────
   const summary   = analytics?.summary
@@ -197,7 +159,6 @@ export default function DashboardPage() {
     { name: 'Resolution', met: sla.resolution_sla_met, breached: sla.resolution_sla_breached },
   ] : []
 
-  const hasFilters = Object.values(filters).some(Boolean)
 
   return (
     <div className="space-y-6">
@@ -241,26 +202,16 @@ export default function DashboardPage() {
                     className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-sm font-medium border transition-all ${
                       showAnaFilter ? 'bg-violet-50 text-violet-700 border-violet-200' : 'bg-white text-gray-600 border-gray-200 hover:border-violet-200'
                     }`}>
-                    <Filter className="w-3.5 h-3.5" /> Date & Product Filter
+                    <Filter className="w-3.5 h-3.5" /> Date Filter
                   </button>
-                  {(anaDateFrom || anaDateTo || anaProduct) && (
-                    <button onClick={() => { setAnaDateFrom(''); setAnaDateTo(''); setAnaProduct('') }} className="text-xs text-gray-400 hover:text-red-500 underline">Clear</button>
+                  {(anaDateFrom || anaDateTo) && (
+                    <button onClick={() => { setAnaDateFrom(''); setAnaDateTo('') }} className="text-xs text-gray-400 hover:text-red-500 underline">Clear</button>
                   )}
                 </div>
                 {showAnaFilter && (
                   <div className="mt-3 flex flex-wrap gap-3 pt-3 border-t border-gray-100">
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">From</label><input type="date" value={anaDateFrom} onChange={e => setAnaDateFrom(e.target.value)} className="input-field text-sm" /></div>
                     <div><label className="block text-xs font-medium text-gray-500 mb-1">To</label><input type="date" value={anaDateTo} onChange={e => setAnaDateTo(e.target.value)} className="input-field text-sm" /></div>
-                    {products.length > 0 && (
-                      <div>
-                        <label className="block text-xs font-medium text-gray-500 mb-1">Product</label>
-                        <select value={anaProduct} onChange={e => setAnaProduct(e.target.value)} className="input-field text-sm w-auto min-w-[130px]">
-                          <option value="">All Products</option>
-                          {products.map(p => <option key={p} value={p}>{p}</option>)}
-                        </select>
-                      </div>
-                    )}
-                    <div className="flex items-end"><button onClick={() => refetchAnalytics()} className="btn-primary text-sm py-1.5">Apply</button></div>
                   </div>
                 )}
               </div>
@@ -557,7 +508,7 @@ export default function DashboardPage() {
                               <td className="px-4 py-3"><SeverityBadge severity={ticket.severity} /></td>
                               <td className="px-4 py-3 text-xs">
                                 {ticket.assignee_id
-                                  ? <span className="font-medium text-gray-700">{nameCache[ticket.assignee_id] ?? `${ticket.assignee_id.slice(0, 8)}…`}</span>
+                                  ? <span className="font-medium text-gray-700">{srNameCache[ticket.assignee_id] ?? `${ticket.assignee_id.slice(0, 8)}…`}</span>
                                   : <span className="text-amber-600 flex items-center gap-1"><UserCheck className="w-3 h-3" />Unassigned</span>}
                               </td>
                               <td className="px-4 py-3">
@@ -694,23 +645,22 @@ export default function DashboardPage() {
             {/* total from API is always accurate regardless of page_size */}
             <KpiCard label="Total Tickets" value={total}         icon={Ticket}      color="text-blue-600"   bg="bg-blue-50"   />
             <KpiCard label="Open"          value={openCount}     icon={Clock}       color="text-yellow-600" bg="bg-yellow-50" />
-            <KpiCard label="Closed"       value={closedCount}    icon={CheckCircle}   color="text-gray-600"   bg="bg-gray-100"  />
-          
             <KpiCard label="Resolved"      value={resolvedCount} icon={CheckCircle} color="text-green-600"  bg="bg-green-50"  />
+            <KpiCard label="Closed"        value={closedCount}   icon={CheckCircle} color="text-gray-600"   bg="bg-gray-100"  />
             {isAgent ? (
               // Agents see workload-relevant cards
               <>
                 <KpiCard label="SLA Breached" value={breachedCount}  icon={ShieldAlert}   color="text-red-600"    bg="bg-red-50"    />
                 <KpiCard label="Escalated"    value={escalatedCount} icon={AlertTriangle} color="text-orange-600" bg="bg-orange-50" />
-                <KpiCard label="On Hold"      value={onHoldCount}    icon={Clock}         color="text-purple-600" bg="bg-purple-50" />  
-                <KpiCard label="In Progress"   value={progressCount} icon={Activity}    color="text-indigo-600" bg="bg-indigo-50" />
+                <KpiCard label="On Hold"      value={onHoldCount}    icon={Clock}         color="text-purple-600" bg="bg-purple-50" />
+                <KpiCard label="In Progress"  value={progressCount}  icon={Activity}      color="text-indigo-600" bg="bg-indigo-50" />
               </>
             ) : (
               // Customers see their ticket lifecycle
               <>
                 <KpiCard label="Acknowledged" value={acknowledgedCount} icon={Zap}         color="text-teal-600"   bg="bg-teal-50"   />
                 <KpiCard label="On Hold"      value={onHoldCount}       icon={Clock}       color="text-purple-600" bg="bg-purple-50" />
-                <KpiCard label="Closed"       value={closedCount}       icon={CheckCircle} color="text-gray-600"   bg="bg-gray-100"  />
+                <KpiCard label="In Progress"  value={progressCount}     icon={Activity}    color="text-indigo-600" bg="bg-indigo-50" />
                 <KpiCard label="SLA Breached" value={breachedCount}     icon={ShieldAlert} color="text-red-600"    bg="bg-red-50"    />
               </>
             )}
