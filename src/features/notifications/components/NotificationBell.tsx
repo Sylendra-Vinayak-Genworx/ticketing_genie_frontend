@@ -198,7 +198,7 @@ export function NotificationBell() {
               <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <Bell className="w-8 h-8 mb-3 opacity-30" />
                 <p className="text-sm">No notifications yet</p>
-                <p className="text-xs mt-1 text-gray-300">Events will appear here in real time</p>
+               
               </div>
             ) : (
               items.map((item) => (

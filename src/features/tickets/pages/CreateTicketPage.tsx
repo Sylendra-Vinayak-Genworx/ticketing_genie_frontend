@@ -25,7 +25,7 @@ interface FormErrors {
 
 interface UploadedFile {
   file: File
-  url: string
+  blobPath: string   // raw GCS object path — sent to backend in attachments[]
   uploading: boolean
   error?: string
 }
@@ -83,21 +83,22 @@ export default function CreateTicketPage() {
       }
 
       // Add a placeholder row while uploading
-      const placeholder: UploadedFile = { file, url: '', uploading: true }
+      const placeholder: UploadedFile = { file, blobPath: '', uploading: true }
       setUploadedFiles(prev => [...prev, placeholder])
 
       try {
         const result = await ticketService.uploadAttachment(file)
         setUploadedFiles(prev =>
           prev.map(f =>
-            f.file === file ? { file, url: result.file_url, uploading: false } : f
+            // Store blob_path — NOT file_url (which is a signed URL and too long for the DB)
+            f.file === file ? { file, blobPath: result.blob_path, uploading: false } : f
           )
         )
       } catch {
         setUploadedFiles(prev =>
           prev.map(f =>
             f.file === file
-              ? { file, url: '', uploading: false, error: 'Upload failed' }
+              ? { file, blobPath: '', uploading: false, error: 'Upload failed' }
               : f
           )
         )
@@ -110,7 +111,6 @@ export default function CreateTicketPage() {
     e.preventDefault()
     const dt = e.dataTransfer
     if (dt.files.length) {
-      // Synthesise a change event-compatible object
       const fakeEvent = { target: { files: dt.files, value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>
       handleFileSelect(fakeEvent)
     }
@@ -136,7 +136,8 @@ export default function CreateTicketPage() {
       return
     }
 
-    const attachmentUrls = uploadedFiles.map(f => f.url).filter(Boolean)
+    // Send blob_path (raw GCS object path) — backend strips and signs on read
+    const attachmentUrls = uploadedFiles.map(f => f.blobPath).filter(Boolean)
 
     const result = await create({
       title: form.title.trim(),

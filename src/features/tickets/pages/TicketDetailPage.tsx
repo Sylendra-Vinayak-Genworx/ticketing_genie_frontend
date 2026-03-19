@@ -1,8 +1,8 @@
-import React from 'react'
+import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Send, Lock, RefreshCw, Loader2, UserCheck,
-  MessageSquare, History, Info, Paperclip, AlertTriangle,
+  MessageSquare, History, Info, Paperclip, AlertTriangle, X, Download,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
@@ -15,9 +15,103 @@ import { formatDateTime, formatRelative } from '@/utils'
 import { useTicketDetailPage } from '../hooks/useTicketDetailPage'
 import type { TicketStatus } from '@/types'
 
+// ── helpers ───────────────────────────────────────────────────────────────────
+
+/** Strip leading UUID hex prefix from GCS stored filenames, e.g.
+ *  "9f2c09830e2148329f44e39b64c11746_Screenshot_from_2026-03-12.png"
+ *  → "Screenshot_from_2026-03-12.png"
+ */
+function cleanFileName(name: string): string {
+  return name.replace(/^[0-9a-f]{32}_/i, '').replace(/_/g, ' ')
+}
+
+function isImageFile(name: string): boolean {
+  return /\.(jpe?g|png|gif|webp)$/i.test(name)
+}
+
+// ── Attachment preview modal ──────────────────────────────────────────────────
+
+interface PreviewAtt {
+  file_name: string
+  file_url: string
+}
+
+function AttachmentPreview({
+  attachment,
+  onClose,
+}: {
+  attachment: PreviewAtt | null
+  onClose: () => void
+}) {
+  if (!attachment) return null
+
+  const isImage = isImageFile(attachment.file_name)
+  const displayName = cleanFileName(attachment.file_name)
+
+  return (
+    // Backdrop — click outside to close
+    <div
+      className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
+      onClick={onClose}
+    >
+      <div
+        className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
+        onClick={(e) => e.stopPropagation()}   // prevent backdrop click propagation
+      >
+        {/* Modal header */}
+        <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
+          <div className="flex items-center gap-2 min-w-0">
+            <Paperclip className="w-4 h-4 text-gray-400 flex-shrink-0" />
+            <span className="text-sm font-medium text-gray-700 truncate">{displayName}</span>
+          </div>
+          <div className="flex items-center gap-1 flex-shrink-0 ml-4">
+            <a
+              href={attachment.file_url}
+              download={attachment.file_name}
+              className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
+              title="Download"
+              onClick={(e) => e.stopPropagation()}
+            >
+              <Download className="w-4 h-4" />
+            </a>
+            <button
+              onClick={onClose}
+              className="p-2 rounded-lg text-gray-500 hover:bg-red-50 hover:text-red-500 transition-colors"
+              title="Close"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+
+        {/* Modal body */}
+        <div className="flex-1 overflow-auto flex items-center justify-center bg-gray-50 p-6">
+          {isImage ? (
+            <img
+              src={attachment.file_url}
+              alt={displayName}
+              className="max-w-full max-h-[70vh] rounded-lg object-contain shadow-md"
+            />
+          ) : (
+            <iframe
+              src={attachment.file_url}
+              title={displayName}
+              className="w-full h-[70vh] rounded-lg border border-gray-200 bg-white"
+            />
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ── Main page ─────────────────────────────────────────────────────────────────
+
 export default function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
   const navigate = useNavigate()
+
+  const [previewAtt, setPreviewAtt] = useState<PreviewAtt | null>(null)
 
   const {
     currentTicket, isLoadingDetail, isSubmitting, fetchById,
@@ -51,12 +145,15 @@ export default function TicketDetailPage() {
   )
 
   const t = currentTicket
-
   const getInProgressAt = () => (t as any).in_progress_at || (t as any).first_response_at || null
   const getResolvedAt   = () => (t as any).resolved_at || null
 
   return (
     <div className="space-y-5">
+
+      {/* ── Attachment preview modal ── */}
+      <AttachmentPreview attachment={previewAtt} onClose={() => setPreviewAtt(null)} />
+
       {/* Header */}
       <div className="flex items-start justify-between gap-4">
         <div>
@@ -84,25 +181,19 @@ export default function TicketDetailPage() {
           <button onClick={() => fetchById(t.ticket_id)} className="btn-ghost p-2" title="Refresh">
             <RefreshCw className="w-4 h-4" />
           </button>
-
           {isAgent && statusOptions.length > 0 && (
-            <button onClick={openStatusModal} className="btn-secondary">
-              Change Status
-            </button>
+            <button onClick={openStatusModal} className="btn-secondary">Change Status</button>
           )}
-
           {role === 'team_lead' && (
             <button onClick={openAssignModal} className="btn-secondary">
               <UserCheck className="w-4 h-4" /> Assign
             </button>
           )}
-
           {!isAgent && t.status === 'RESOLVED' && (
             <button onClick={() => setCloseConfirm(true)} className="btn-danger">
               <Lock className="w-4 h-4" /> Close
             </button>
           )}
-
           {!isAgent && t.status === 'CLOSED' && (
             <button onClick={() => setReopenConfirm(true)} className="btn-secondary">
               <RefreshCw className="w-4 h-4" /> Reopen
@@ -114,6 +205,7 @@ export default function TicketDetailPage() {
       {/* Main Content */}
       <div className="grid grid-cols-1 xl:grid-cols-3 gap-5">
         <div className="xl:col-span-2 space-y-4">
+
           {/* Tabs */}
           <div className="flex gap-0.5 border-b border-gray-200 overflow-x-auto">
             {[
@@ -278,16 +370,21 @@ export default function TicketDetailPage() {
           )}
         </div>
 
-        {/* Right Sidebar */}
+        {/* ── Right Sidebar ── */}
         <div className="space-y-4">
           {t.attachments.length > 0 && (
             <div className="card p-4 space-y-2 text-sm">
               <h3 className="font-semibold text-gray-900">Attachments ({t.attachments.length})</h3>
               {t.attachments.map((att: any) => (
-                <a key={att.attachment_id} href={att.file_url} target="_blank" rel="noopener noreferrer" className="flex items-center gap-2 text-blue-600 hover:underline">
-                  <Paperclip className="w-3.5 h-3.5" />
-                  {att.file_name}
-                </a>
+                <button
+                  key={att.attachment_id}
+                  type="button"
+                  onClick={() => setPreviewAtt({ file_name: att.file_name, file_url: att.file_url })}
+                  className="flex items-center gap-2 text-blue-600 hover:text-blue-800 hover:underline w-full text-left"
+                >
+                  <Paperclip className="w-3.5 h-3.5 flex-shrink-0" />
+                  <span className="truncate">{cleanFileName(att.file_name)}</span>
+                </button>
               ))}
             </div>
           )}
