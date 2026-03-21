@@ -35,20 +35,6 @@ ticketingApi.interceptors.request.use(attachToken)
 
 // ─── Response Interceptor (Handle 401 — Refresh & Retry) ─────────────────────
 
-let isRefreshing = false
-let failedQueue: Array<{
-  resolve: (token: string) => void
-  reject: (err: unknown) => void
-}> = []
-
-function processQueue(error: unknown, token: string | null) {
-  failedQueue.forEach((p) => {
-    if (error) p.reject(error)
-    else p.resolve(token!)
-  })
-  failedQueue = []
-}
-
 /**
  * Paths that must NEVER trigger a refresh attempt.
  * These are auth-internal endpoints; refreshing on their failure would cause
@@ -68,7 +54,25 @@ function shouldSkipRefresh(url: string | undefined): boolean {
   return AUTH_SKIP_PATHS.some(path => url.includes(path))
 }
 
+// FIX: each instance gets its own isRefreshing flag and failedQueue.
+// Previously both instances shared a single module-level flag, so a 401 on
+// a ticketing request could block or mis-resolve retries queued from an auth
+// request, and vice versa.
 function addRefreshInterceptor(instance: typeof ticketingApi) {
+  let isRefreshing = false
+  let failedQueue: Array<{
+    resolve: (token: string) => void
+    reject: (err: unknown) => void
+  }> = []
+
+  function processQueue(error: unknown, token: string | null) {
+    failedQueue.forEach((p) => {
+      if (error) p.reject(error)
+      else p.resolve(token!)
+    })
+    failedQueue = []
+  }
+
   instance.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {

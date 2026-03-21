@@ -43,16 +43,17 @@ export function Modal({ open, onClose, title, children, footer, size = 'md', cla
         onClick={onClose}
       />
 
-      {/* Panel */}
+      {/* Panel — fixed max height so it never overflows the viewport */}
       <div
         className={cn(
-          'relative w-full bg-white rounded-2xl shadow-2xl animate-slide-in',
+          'relative w-full bg-white rounded-2xl shadow-2xl animate-slide-in flex flex-col',
+          'max-h-[90vh]',
           SIZE_CLASSES[size],
           className
         )}
       >
-        {/* Header */}
-        <div className="flex items-center justify-between px-6 py-4 border-b border-gray-100">
+        {/* Header — always visible */}
+        <div className="flex-shrink-0 flex items-center justify-between px-6 py-4 border-b border-gray-100">
           <h2 className="text-lg font-semibold text-gray-900">{title}</h2>
           <button
             onClick={onClose}
@@ -62,12 +63,12 @@ export function Modal({ open, onClose, title, children, footer, size = 'md', cla
           </button>
         </div>
 
-        {/* Body */}
-        <div className="px-6 py-5">{children}</div>
+        {/* Body — scrolls when content overflows */}
+        <div className="flex-1 overflow-y-auto px-6 py-5 min-h-0">{children}</div>
 
-        {/* Footer */}
+        {/* Footer — always visible */}
         {footer && (
-          <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
+          <div className="flex-shrink-0 flex items-center justify-end gap-3 px-6 py-4 border-t border-gray-100 bg-gray-50 rounded-b-2xl">
             {footer}
           </div>
         )}
