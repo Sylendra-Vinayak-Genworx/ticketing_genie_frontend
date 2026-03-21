@@ -212,14 +212,14 @@ export default function CreateTicketPage() {
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Product</label>
             <div className="input-field bg-gray-50 text-gray-500 flex items-center justify-between cursor-not-allowed select-none">
-              <span>bookmyticket</span>
+              <span>Bookmyticket</span>
               <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
             </div>
           </div>
           <div>
             <label className="block text-sm font-medium text-gray-700 mb-1.5">Source</label>
             <div className="input-field bg-gray-50 text-gray-500 flex items-center justify-between cursor-not-allowed select-none">
-              <span>Manual Assign</span>
+              <span>Manual Ticket Creation</span>
               <Lock className="w-3.5 h-3.5 text-gray-400 flex-shrink-0" />
             </div>
             <p className="text-xs text-gray-400 mt-1">Portal-submitted tickets</p>

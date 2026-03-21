@@ -1,182 +1,36 @@
-import React, { useEffect, useState } from 'react'
-import { Search, Users, Pencil, Eye, Plus, Loader2, X, Award, UserCheck, UserX, ShieldCheck, Crown} from 'lucide-react'
-import { authService } from '@/features/auth/services/authService'
-import { ticketService } from '@/features/tickets/services/ticketService'
-import { tierService } from '@/features/tickets/services/tierService'
-import type { CustomerTier } from '@/features/tickets/services/tierService'
+import React from 'react'
+import { Search, Users, Pencil, Eye, Plus, Loader2, X, Award, UserCheck, UserX, ShieldCheck, Crown, Shield, Headphones } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { LoadingSpinner, EmptyState } from '@/components/common/LoadingSpinner'
 import { Avatar } from '@/components/ui/Avatar'
 import { RoleBadge } from '@/components/ui/Badge'
 import { Modal } from '@/components/ui/Modal'
 import { formatDate } from '@/utils'
-import toast from 'react-hot-toast'
-import type { User, UserUpdateRequest, UserCreateRequest, AgentSkill, UserRole } from '@/types'
-
-const STAFF_ROLES = ['admin', 'team_lead', 'support_agent']
-const ROLE_OPTIONS = [
-  { value: 'team_lead',     label: 'Team Lead'     },
-  { value: 'support_agent', label: 'Support Agent' },
-]
-
-const PROFICIENCY_LEVELS = [
-  { value: 'BEGINNER',     label: 'Beginner',     color: 'bg-gray-100 text-gray-700'    },
-  { value: 'INTERMEDIATE', label: 'Intermediate', color: 'bg-blue-100 text-blue-700'    },
-  { value: 'ADVANCED',     label: 'Advanced',     color: 'bg-green-100 text-green-700'  },
-  { value: 'EXPERT',       label: 'Expert',       color: 'bg-purple-100 text-purple-700'},
-]
-
-const TIER_PALETTE: Record<number, { bg: string; text: string; border: string }> = {
-  1: { bg: 'bg-gray-50',   text: 'text-gray-600',   border: 'border-gray-200'   },
-  2: { bg: 'bg-blue-50',   text: 'text-blue-700',   border: 'border-blue-200'   },
-  3: { bg: 'bg-amber-50',  text: 'text-amber-700',  border: 'border-amber-200'  },
-  4: { bg: 'bg-purple-50', text: 'text-purple-700', border: 'border-purple-200' },
-}
-
-function tierStyle(tierId: number | null) {
-  if (!tierId) return { bg: 'bg-gray-50', text: 'text-gray-400', border: 'border-gray-200' }
-  return TIER_PALETTE[tierId] ?? { bg: 'bg-gray-50', text: 'text-gray-600', border: 'border-gray-200' }
-}
-
-type TabView   = 'staff' | 'customers'
-type ModalMode = 'view' | 'edit' | 'create' | 'skills' | null
-
-interface SkillForm { area_id: number; proficiency_level: string }
+import type { UserRole } from '@/types'
+import type { TabView } from '../types'
+import { ROLE_OPTIONS, PROFICIENCY_LEVELS, tierStyle } from '../constants'
+import { useUserManagement } from '../hooks/useUserManagement'
 
 export default function UsersPage() {
-  const [allUsers, setAllUsers]     = useState<User[]>([])
-  const [tiers, setTiers]           = useState<CustomerTier[]>([])
-  const [loading, setLoading]       = useState(true)
-  const [search, setSearch]         = useState('')
-  const [activeTab, setActiveTab]   = useState<TabView>('staff')
-  const [modalMode, setModalMode]   = useState<ModalMode>(null)
-  const [selectedUser, setSelectedUser] = useState<User | null>(null)
-  const [saving, setSaving]         = useState(false)
-  const [togglingId, setTogglingId] = useState<string | null>(null)
-
-  const [areas, setAreas]             = useState<Array<{ area_id: number; name: string }>>([])
-  const [userForm, setUserForm]       = useState<Partial<UserCreateRequest & UserUpdateRequest>>({ email: '', full_name: '', role: 'support_agent', is_active: true })
-  const [agentSkills, setAgentSkills] = useState<AgentSkill[]>([])
-  const [skillsLoading, setSkillsLoading] = useState(false)
-  const [newSkill, setNewSkill]       = useState<SkillForm>({ area_id: 0, proficiency_level: 'BEGINNER' })
-
-  async function loadData() {
-    setLoading(true)
-    try {
-      const [users, areasData, tiersData] = await Promise.all([
-        authService.getAllUsers(),
-        ticketService.getAreasOfConcern(),
-        tierService.listTiers(),
-      ])
-      setAllUsers(users)
-      setAreas(areasData)
-      setTiers(tiersData)
-    } catch {
-      toast.error('Failed to load user data')
-    } finally {
-      setLoading(false)
-    }
-  }
-
-  useEffect(() => { loadData() }, [])
-
-  const staffUsers    = allUsers.filter(u => STAFF_ROLES.includes(u.role))
-  const customerUsers = allUsers.filter(u => u.role === 'user')
-  const activeList    = activeTab === 'staff' ? staffUsers : customerUsers
-
-  const filtered = activeList.filter(u =>
-    u.email.toLowerCase().includes(search.toLowerCase()) ||
-    (u.full_name || '').toLowerCase().includes(search.toLowerCase())
-  )
-
-  function getTierName(id: number | null) {
-    if (!id) return 'Free'
-    return tiers.find(t => t.tier_id === id)?.name ?? `Tier ${id}`
-  }
-
-  function openModal(mode: ModalMode, user?: User) {
-    setModalMode(mode)
-    setSelectedUser(user || null)
-    if (mode === 'create')               setUserForm({ email: '', full_name: '', role: 'support_agent', is_active: true })
-    else if (mode === 'edit' && user)    setUserForm({ full_name: user.full_name || '', is_active: user.is_active })
-    else if (mode === 'skills' && user)  loadAgentSkills(user.id)
-  }
-
-  function closeModal() {
-    setModalMode(null); setSelectedUser(null); setUserForm({})
-    setAgentSkills([]); setNewSkill({ area_id: 0, proficiency_level: 'BEGINNER' })
-  }
-
-  async function loadAgentSkills(userId: string) {
-    setSkillsLoading(true)
-    try   { const r = await authService.getUserSkills(userId); setAgentSkills(r.skills) }
-    catch { toast.error('Failed to load agent skills') }
-    finally { setSkillsLoading(false) }
-  }
-
-  async function handleToggleCustomer(u: User) {
-    setTogglingId(u.id)
-    try {
-      await authService.updateUser(u.id, { is_active: !u.is_active })
-      setAllUsers(prev => prev.map(x => x.id === u.id ? { ...x, is_active: !u.is_active } : x))
-      toast.success(`Customer ${!u.is_active ? 'activated' : 'deactivated'} successfully`)
-    } catch { toast.error('Failed to update customer status') }
-    finally { setTogglingId(null) }
-  }
-
-  async function handleCreateUser() {
-    if (!userForm.email || !userForm.role) { toast.error('Email and role are required'); return }
-    setSaving(true)
-    try {
-      const r = await authService.createUser({ email: userForm.email, full_name: userForm.full_name || '', role: userForm.role as any })
-      toast.success(<div><p className="font-semibold">User created successfully</p><p className="text-sm text-gray-600">Temporary password: {r.temporary_password}</p></div>, { duration: 10000 })
-      closeModal(); loadData()
-    } catch (err: any) { toast.error(err.response?.data?.detail || 'Failed to create user') }
-    finally { setSaving(false) }
-  }
-
-  async function handleUpdateUser() {
-    if (!selectedUser) return
-    setSaving(true)
-    try { await authService.updateUser(selectedUser.id, { full_name: userForm.full_name, is_active: userForm.is_active }); toast.success('User updated successfully'); closeModal(); loadData() }
-    catch { toast.error('Failed to update user') }
-    finally { setSaving(false) }
-  }
-
-  async function handleAddSkill() {
-    if (!selectedUser || !newSkill.area_id) { toast.error('Please select an area'); return }
-    setSaving(true)
-    try {
-      await authService.updateUserSkills(selectedUser.id, { skills: [...agentSkills.map(s => ({ area_id: s.area_id, proficiency_level: s.proficiency_level })), { area_id: newSkill.area_id, proficiency_level: newSkill.proficiency_level }] })
-      toast.success('Skill added'); loadAgentSkills(selectedUser.id); setNewSkill({ area_id: 0, proficiency_level: 'BEGINNER' })
-    } catch { toast.error('Failed to add skill') }
-    finally { setSaving(false) }
-  }
-
-  async function handleRemoveSkill(areaId: number) {
-    if (!selectedUser) return
-    setSaving(true)
-    try { await authService.updateUserSkills(selectedUser.id, { skills: agentSkills.filter(s => s.area_id !== areaId).map(s => ({ area_id: s.area_id, proficiency_level: s.proficiency_level })) }); toast.success('Skill removed'); loadAgentSkills(selectedUser.id) }
-    catch { toast.error('Failed to remove skill') }
-    finally { setSaving(false) }
-  }
-
-  async function handleUpdateSkillProficiency(areaId: number, newLevel: string) {
-    if (!selectedUser) return
-    setSaving(true)
-    try { await authService.updateUserSkills(selectedUser.id, { skills: agentSkills.map(s => s.area_id === areaId ? { area_id: s.area_id, proficiency_level: newLevel } : { area_id: s.area_id, proficiency_level: s.proficiency_level }) }); toast.success('Skill updated'); loadAgentSkills(selectedUser.id) }
-    catch { toast.error('Failed to update skill') }
-    finally { setSaving(false) }
-  }
-
-  const availableAreas = areas.filter(a => !agentSkills.some(s => s.area_id === a.area_id))
-
-  const modalTitle = { view: 'User Details', edit: 'Edit User', create: 'Create New User', skills: 'Manage Agent Skills' }[modalMode!] ?? ''
+  const {
+    loading, areas, filtered,
+    adminUsers, leadUsers, agentUsers, customerUsers,
+    search, setSearch, activeTab, switchTab,
+    modalMode, selectedUser, openModal, closeModal, modalTitle,
+    saving, togglingId,
+    userForm, setUserForm,
+    handleCreateUserAndClose, handleUpdateUser, handleToggleCustomer,
+    agentSkills, skillsLoading, newSkill, setNewSkill, availableAreas,
+    handleAddSkill, handleRemoveSkill, handleUpdateSkillProficiency,
+    createSkills, createNewSkill, setCreateNewSkill, availableCreateAreas,
+    handleAddCreateSkill, handleRemoveCreateSkill,
+    getTierName, getUserName,
+  } = useUserManagement()
 
   const modalFooter = modalMode === 'view' || modalMode === 'skills'
     ? <button onClick={closeModal} className="btn-secondary">Close</button>
     : modalMode === 'create'
-    ? <><button onClick={closeModal} className="btn-secondary" disabled={saving}>Cancel</button><button onClick={handleCreateUser} disabled={saving} className="btn-primary flex items-center gap-2">{saving && <Loader2 className="w-4 h-4 animate-spin" />}Create User</button></>
+    ? <><button onClick={closeModal} className="btn-secondary" disabled={saving}>Cancel</button><button onClick={handleCreateUserAndClose} disabled={saving} className="btn-primary flex items-center gap-2">{saving && <Loader2 className="w-4 h-4 animate-spin" />}Create User</button></>
     : modalMode === 'edit'
     ? <><button onClick={closeModal} className="btn-secondary" disabled={saving}>Cancel</button><button onClick={handleUpdateUser} disabled={saving} className="btn-primary flex items-center gap-2">{saving && <Loader2 className="w-4 h-4 animate-spin" />}Save Changes</button></>
     : null
@@ -194,11 +48,16 @@ export default function UsersPage() {
       />
 
       {/* Tab Toggle */}
-      <div className="card p-1 inline-flex rounded-xl gap-1">
-        {([['staff', 'Staff', staffUsers.length, <ShieldCheck className="w-4 h-4" />], ['customers', 'Customers', customerUsers.length]] as const).map(([tab, label, count, icon]) => (
+      <div className="card p-1 inline-flex rounded-xl gap-1 flex-wrap">
+        {([
+          ['support_agent', 'Agents',    agentUsers.length,    <Headphones className="w-4 h-4" />],
+          ['team_lead',     'Leads',     leadUsers.length,     <ShieldCheck className="w-4 h-4" />],
+          ['admin',         'Admins',    adminUsers.length,    <Shield className="w-4 h-4" />],
+          ['customers',     'Customers', customerUsers.length, <Crown className="w-4 h-4" />],
+        ] as const).map(([tab, label, count, icon]) => (
           <button
             key={tab}
-            onClick={() => { setActiveTab(tab as TabView); setSearch('') }}
+            onClick={() => switchTab(tab as TabView)}
             className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-all ${
               activeTab === tab ? 'bg-blue-600 text-white shadow-sm' : 'text-gray-500 hover:text-gray-800 hover:bg-gray-100'
             }`}
@@ -218,7 +77,7 @@ export default function UsersPage() {
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
           <input
             type="text"
-            placeholder={activeTab === 'staff' ? 'Search staff by name or email…' : 'Search customers by name or email…'}
+            placeholder="Search by name or email…"
             value={search}
             onChange={e => setSearch(e.target.value)}
             className="input-field pl-9"
@@ -233,10 +92,10 @@ export default function UsersPage() {
           <EmptyState
             icon={<Users className="w-12 h-12" />}
             title="No users found"
-            description={search ? `No matches for "${search}"` : `No ${activeTab === 'staff' ? 'staff members' : 'customers'} registered yet.`}
+            description={search ? `No matches for "${search}"` : 'No users found in this category.'}
           />
-        ) : activeTab === 'staff' ? (
-          /* ─── Staff Table ─────────────────────────────────────────────── */
+        ) : activeTab !== 'customers' ? (
+          /* ─── Staff Table (Admin / Lead / Agent) ───────────────────────── */
           <div className="overflow-x-auto">
             <table className="w-full text-sm">
               <thead>
@@ -378,7 +237,34 @@ export default function UsersPage() {
               <div><label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Verified</label><span className={`badge ${selectedUser.is_verified ? 'bg-green-100 text-green-700' : 'bg-yellow-100 text-yellow-700'}`}>{selectedUser.is_verified ? 'Verified' : 'Not Verified'}</span></div>
               <div><label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Created</label><p className="text-sm text-gray-900">{formatDate(selectedUser.created_at)}</p></div>
             </div>
-            {selectedUser.lead_id && <div><label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Reports To</label><p className="text-sm text-gray-900">{selectedUser.lead_id}</p></div>}
+            {selectedUser.lead_id && <div><label className="block text-xs font-semibold text-gray-500 uppercase mb-1">Reports To</label><p className="text-sm text-gray-900">{getUserName(selectedUser.lead_id)}</p></div>}
+
+            {/* Agent Skills in view modal */}
+            {selectedUser.role === 'support_agent' && (
+              <div className="pt-2 border-t border-gray-100">
+                <label className="block text-xs font-semibold text-gray-500 uppercase mb-2">Skills</label>
+                {skillsLoading ? (
+                  <div className="flex items-center gap-2 py-2"><Loader2 className="w-4 h-4 animate-spin text-gray-400" /><span className="text-sm text-gray-400">Loading skills…</span></div>
+                ) : agentSkills.length === 0 ? (
+                  <p className="text-sm text-gray-400 italic">No skills assigned</p>
+                ) : (
+                  <div className="flex flex-wrap gap-2">
+                    {agentSkills.map(skill => {
+                      const prof = PROFICIENCY_LEVELS.find(p => p.value === skill.proficiency_level)
+                      return (
+                        <span key={skill.area_id} className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-medium bg-purple-50 text-purple-700 border border-purple-200">
+                          <Award className="w-3 h-3" />
+                          {skill.area_name}
+                          <span className={`px-1.5 py-0.5 rounded-full text-[10px] font-semibold ${prof?.color || 'bg-gray-100 text-gray-700'}`}>
+                            {prof?.label || skill.proficiency_level}
+                          </span>
+                        </span>
+                      )
+                    })}
+                  </div>
+                )}
+              </div>
+            )}
           </div>
         )}
 
@@ -399,6 +285,65 @@ export default function UsersPage() {
                 {ROLE_OPTIONS.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
               </select>
             </div>
+
+            {/* Inline Agent Skills (only for support_agent) */}
+            {userForm.role === 'support_agent' && (
+              <div className="border border-gray-200 rounded-lg p-4 space-y-3 bg-gray-50/50">
+                <h4 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+                  <Award className="w-4 h-4 text-purple-500" /> Agent Skills
+                </h4>
+
+                {/* List of added skills */}
+                {createSkills.length > 0 && (
+                  <div className="space-y-2">
+                    {createSkills.map(skill => {
+                      const areaName = areas.find(a => a.area_id === skill.area_id)?.name ?? `Area ${skill.area_id}`
+                      const prof = PROFICIENCY_LEVELS.find(p => p.value === skill.proficiency_level)
+                      return (
+                        <div key={skill.area_id} className="flex items-center justify-between p-2.5 bg-white rounded-lg border border-gray-200">
+                          <div className="flex items-center gap-2">
+                            <span className="text-sm font-medium text-gray-900">{areaName}</span>
+                            <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-xs font-medium ${prof?.color || 'bg-gray-100 text-gray-700'}`}>
+                              {prof?.label || skill.proficiency_level}
+                            </span>
+                          </div>
+                          <button type="button" onClick={() => handleRemoveCreateSkill(skill.area_id)} className="p-1 text-red-400 hover:text-red-600 hover:bg-red-50 rounded-lg transition-colors">
+                            <X className="w-3.5 h-3.5" />
+                          </button>
+                        </div>
+                      )
+                    })}
+                  </div>
+                )}
+
+                {/* Add new skill row */}
+                {availableCreateAreas.length > 0 && (
+                  <div className="flex items-end gap-2">
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Area of Concern</label>
+                      <select value={createNewSkill.area_id} onChange={e => setCreateNewSkill(p => ({ ...p, area_id: parseInt(e.target.value) }))} className="input-field text-sm">
+                        <option value={0}>Select an area...</option>
+                        {availableCreateAreas.map(a => <option key={a.area_id} value={a.area_id}>{a.name}</option>)}
+                      </select>
+                    </div>
+                    <div className="flex-1">
+                      <label className="block text-xs font-medium text-gray-600 mb-1">Expertise</label>
+                      <select value={createNewSkill.proficiency_level} onChange={e => setCreateNewSkill(p => ({ ...p, proficiency_level: e.target.value }))} className="input-field text-sm">
+                        {PROFICIENCY_LEVELS.map(p => <option key={p.value} value={p.value}>{p.label}</option>)}
+                      </select>
+                    </div>
+                    <button type="button" onClick={handleAddCreateSkill} disabled={!createNewSkill.area_id} className="btn-secondary flex items-center gap-1 px-3 py-2 text-sm">
+                      <Plus className="w-3.5 h-3.5" /> Add
+                    </button>
+                  </div>
+                )}
+
+                {availableCreateAreas.length === 0 && createSkills.length > 0 && (
+                  <p className="text-xs text-gray-500 italic">All available areas have been assigned.</p>
+                )}
+              </div>
+            )}
+
             <div className="bg-blue-50 border border-blue-200 rounded-lg p-3">
               <p className="text-sm text-blue-800"><strong>Note:</strong> A temporary password will be generated and displayed after creation. The user will be required to change it on first login.</p>
             </div>

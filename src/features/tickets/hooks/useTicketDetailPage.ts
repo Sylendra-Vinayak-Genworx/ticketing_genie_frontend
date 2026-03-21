@@ -1,8 +1,9 @@
-import { useEffect, useState, useCallback } from 'react'
+import { useEffect, useState, useCallback, useRef } from 'react'
 import { useAuth } from '@/features/auth'
 import { useTickets } from './useTickets'
 import { useTicketDetail } from './useTicketDetail'
 import { authService } from '@/features/auth/services/authService'
+import { ticketService } from '../services/ticketService'
 import toast from 'react-hot-toast'
 import type { TicketStatus, AddCommentRequest } from '@/types'
 
@@ -36,6 +37,11 @@ export function useTicketDetailPage(ticketId: number | undefined) {
   const [isInternal, setIsInternal]         = useState(false)
   const [triggersHold, setTriggersHold]     = useState(false)
   const [triggersResume, setTriggersResume] = useState(false)
+
+  // Comment image attachments
+  const [commentImages, setCommentImages]           = useState<File[]>([])
+  const [isUploadingImages, setIsUploadingImages]   = useState(false)
+  const commentImageInputRef                        = useRef<HTMLInputElement>(null)
 
   // Status modal
   const [statusModalOpen, setStatusModalOpen] = useState(false)
@@ -83,6 +89,10 @@ export function useTicketDetailPage(ticketId: number | undefined) {
           .filter((e: any) => e.event_type === 'ASSIGNED')
           .flatMap((e: any) => [e.new_value, e.old_value])
           .filter((v: any): v is string => !!v && UUID_RE.test(v)),
+        // Resolve comment authors so the conversation tab shows names not UUIDs
+        ...currentTicket.comments
+          .map((c: any) => c.author_id)
+          .filter((id: any): id is string => !!id && UUID_RE.test(id)),
       ]),
     ]
     if (actorIds.length > 0) {
@@ -95,7 +105,7 @@ export function useTicketDetailPage(ticketId: number | undefined) {
         )
       ).then(() => setEventUserNames(nameMap))
     }
-  }, [currentTicket?.ticket_id, currentTicket?.events?.length])
+  }, [currentTicket?.ticket_id, currentTicket?.events?.length, currentTicket?.comments?.length])
 
   const openAssignModal = useCallback(() => {
     setAssigneeId('')
@@ -109,12 +119,30 @@ export function useTicketDetailPage(ticketId: number | undefined) {
     e.preventDefault()
     if (!commentBody.trim() || !currentTicket) return
 
+    // Upload any staged images first
+    let blobPaths: string[] = []
+    if (commentImages.length > 0) {
+      setIsUploadingImages(true)
+      try {
+        const uploads = await Promise.all(
+          commentImages.map(f => ticketService.uploadCommentAttachment(f))
+        )
+        blobPaths = uploads.map(u => u.blob_path)
+      } catch {
+        toast.error('Image upload failed. Please try again.')
+        setIsUploadingImages(false)
+        return
+      }
+      setIsUploadingImages(false)
+    }
+
     const data: AddCommentRequest = {
       body: commentBody.trim(),
       is_internal: isInternal,
       triggers_hold: triggersHold,
       triggers_resume: triggersResume,
       ticket_id: currentTicket.ticket_id,
+      attachments: blobPaths,
     }
 
     const result = await addComment(currentTicket.ticket_id, data)
@@ -124,6 +152,7 @@ export function useTicketDetailPage(ticketId: number | undefined) {
       setIsInternal(false)
       setTriggersHold(false)
       setTriggersResume(false)
+      setCommentImages([])
     } else {
       toast.error((result as any).payload || 'Failed to add comment')
     }
@@ -206,6 +235,9 @@ export function useTicketDetailPage(ticketId: number | undefined) {
     triggersHold, setTriggersHold,
     triggersResume, setTriggersResume,
     handleAddComment,
+    commentImages, setCommentImages,
+    isUploadingImages,
+    commentImageInputRef,
 
     // Status modal
     statusModalOpen, setStatusModalOpen,

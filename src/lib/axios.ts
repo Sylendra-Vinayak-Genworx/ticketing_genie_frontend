@@ -49,13 +49,33 @@ function processQueue(error: unknown, token: string | null) {
   failedQueue = []
 }
 
+/**
+ * Paths that must NEVER trigger a refresh attempt.
+ * These are auth-internal endpoints; refreshing on their failure would cause
+ * a recursive loop (e.g. failed login → refresh → failed refresh → logout).
+ */
+const AUTH_SKIP_PATHS = [
+  '/auth/login',
+  '/auth/refresh',
+  '/auth/signup',
+  '/auth/logout',
+  '/auth/forgot-password',
+  '/auth/reset-password',
+]
+
+function shouldSkipRefresh(url: string | undefined): boolean {
+  if (!url) return false
+  return AUTH_SKIP_PATHS.some(path => url.includes(path))
+}
+
 function addRefreshInterceptor(instance: typeof ticketingApi) {
   instance.interceptors.response.use(
     (response) => response,
     async (error: AxiosError) => {
       const originalRequest = error.config as InternalAxiosRequestConfig & { _retry?: boolean }
 
-      if (error.response?.status === 401 && !originalRequest._retry) {
+      // Skip refresh for auth-internal endpoints to avoid recursive loops
+      if (error.response?.status === 401 && !originalRequest._retry && !shouldSkipRefresh(originalRequest.url)) {
         if (isRefreshing) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject })
@@ -94,7 +114,8 @@ function addRefreshInterceptor(instance: typeof ticketingApi) {
   )
 }
 
-// The refresh interceptor must ONLY be applied to the ticketing API.
-// Attaching it to authApi would cause login/refresh failures to trigger
-// a recursive refresh loop, which logs the user out on every failed login attempt.
+// Apply refresh interceptor to BOTH API instances.
+// Auth-internal endpoints (login, refresh, signup, etc.) are excluded via
+// shouldSkipRefresh() to prevent recursive refresh loops.
+addRefreshInterceptor(authApi)
 addRefreshInterceptor(ticketingApi)

@@ -1,8 +1,8 @@
-import React, { useState } from 'react'
+import React, { useState, useRef } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Send, Lock, RefreshCw, Loader2, UserCheck,
-  MessageSquare, History, Info, Paperclip, AlertTriangle, X, Download,
+  MessageSquare, History, Info, Paperclip, AlertTriangle, X, Download, ImagePlus,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
@@ -15,12 +15,7 @@ import { formatDateTime, formatRelative } from '@/utils'
 import { useTicketDetailPage } from '../hooks/useTicketDetailPage'
 import type { TicketStatus } from '@/types'
 
-// ── helpers ───────────────────────────────────────────────────────────────────
 
-/** Strip leading UUID hex prefix from GCS stored filenames, e.g.
- *  "9f2c09830e2148329f44e39b64c11746_Screenshot_from_2026-03-12.png"
- *  → "Screenshot_from_2026-03-12.png"
- */
 function cleanFileName(name: string): string {
   return name.replace(/^[0-9a-f]{32}_/i, '').replace(/_/g, ' ')
 }
@@ -29,7 +24,6 @@ function isImageFile(name: string): boolean {
   return /\.(jpe?g|png|gif|webp)$/i.test(name)
 }
 
-// ── Attachment preview modal ──────────────────────────────────────────────────
 
 interface PreviewAtt {
   file_name: string
@@ -123,6 +117,9 @@ export default function TicketDetailPage() {
     triggersHold, setTriggersHold,
     triggersResume, setTriggersResume,
     handleAddComment,
+    commentImages, setCommentImages,
+    isUploadingImages,
+    commentImageInputRef,
     statusModalOpen, setStatusModalOpen,
     newStatus, setNewStatus,
     statusComment, setStatusComment,
@@ -181,10 +178,10 @@ export default function TicketDetailPage() {
           <button onClick={() => fetchById(t.ticket_id)} className="btn-ghost p-2" title="Refresh">
             <RefreshCw className="w-4 h-4" />
           </button>
-          {isAgent && statusOptions.length > 0 && (
+          {isAgent && statusOptions.length > 0 && t.status !== 'CLOSED' && (
             <button onClick={openStatusModal} className="btn-secondary">Change Status</button>
           )}
-          {role === 'team_lead' && (
+          {role === 'team_lead' && t.status !== 'CLOSED' && (
             <button onClick={openAssignModal} className="btn-secondary">
               <UserCheck className="w-4 h-4" /> Assign
             </button>
@@ -253,7 +250,9 @@ export default function TicketDetailPage() {
                         <Avatar name={comment.author_id} size="sm" />
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-2 flex-wrap">
-                            <span className="text-sm font-semibold text-gray-900">{comment.author_id.slice(0, 12)}…</span>
+                            <span className="text-sm font-semibold text-gray-900">
+                              {eventUserNames[comment.author_id] || comment.author_id.slice(0, 12) + '…'}
+                            </span>
                             <span className="text-xs text-gray-400">{comment.author_role.replace('_', ' ')}</span>
                             {isAgent && comment.is_internal && <span className="badge bg-yellow-100 text-yellow-700">Internal Note</span>}
                             {comment.triggers_hold && <span className="badge bg-gray-100 text-gray-700">⏸ Paused SLA</span>}
@@ -261,6 +260,44 @@ export default function TicketDetailPage() {
                             <span className="text-xs text-gray-400 ml-auto">{formatRelative(comment.created_at)}</span>
                           </div>
                           <p className="text-sm text-gray-700 mt-2 whitespace-pre-wrap">{comment.body}</p>
+
+                          {/* Inline comment attachments */}
+                          {comment.attachments && comment.attachments.length > 0 && (
+                            <div className="mt-3 space-y-2">
+                              <div className="flex flex-wrap gap-2">
+                                {comment.attachments
+                                  .filter((att: any) => isImageFile(att.file_name))
+                                  .map((att: any) => (
+                                    <button
+                                      key={att.attachment_id}
+                                      type="button"
+                                      onClick={() => setPreviewAtt({ file_name: att.file_name, file_url: att.file_url })}
+                                      className="group relative block"
+                                      title={cleanFileName(att.file_name)}
+                                    >
+                                      <img
+                                        src={att.file_url}
+                                        alt={cleanFileName(att.file_name)}
+                                        className="w-24 h-24 object-cover rounded-lg border border-gray-200 shadow-sm group-hover:opacity-90 transition-opacity"
+                                      />
+                                    </button>
+                                  ))}
+                              </div>
+                              {comment.attachments
+                                .filter((att: any) => !isImageFile(att.file_name))
+                                .map((att: any) => (
+                                  <button
+                                    key={att.attachment_id}
+                                    type="button"
+                                    onClick={() => setPreviewAtt({ file_name: att.file_name, file_url: att.file_url })}
+                                    className="flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline"
+                                  >
+                                    <Paperclip className="w-3 h-3 flex-shrink-0" />
+                                    <span className="truncate max-w-xs">{cleanFileName(att.file_name)}</span>
+                                  </button>
+                                ))}
+                            </div>
+                          )}
                         </div>
                       </div>
                     </div>
@@ -268,6 +305,13 @@ export default function TicketDetailPage() {
                 </div>
               )}
 
+              {t.status === 'CLOSED' ? (
+                <div className="card p-5 bg-gray-50 border-gray-200 text-center">
+                  <Lock className="w-5 h-5 text-gray-400 mx-auto mb-2" />
+                  <p className="text-sm font-medium text-gray-500">This ticket is closed</p>
+                  <p className="text-xs text-gray-400 mt-1">No comments or actions can be performed on a closed ticket. The customer can reopen it if needed.</p>
+                </div>
+              ) : (
               <form onSubmit={handleAddComment} className="card p-4 space-y-3">
                 <div className="flex items-center gap-2">
                   <Avatar name={user?.email || ''} size="sm" />
@@ -280,6 +324,68 @@ export default function TicketDetailPage() {
                   rows={4}
                   className="input-field resize-y"
                 />
+
+                {/* ── Image attachment area ── */}
+                <div className="space-y-2">
+                  {/* Hidden file input */}
+                  <input
+                    ref={commentImageInputRef}
+                    type="file"
+                    accept="image/jpeg,image/png,image/gif,image/webp"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const chosen = Array.from(e.target.files || [])
+                      setCommentImages(prev => {
+                        const existing = new Set(prev.map(f => f.name + f.size))
+                        const fresh = chosen.filter(f => !existing.has(f.name + f.size))
+                        return [...prev, ...fresh]
+                      })
+                      // Reset so the same file can be re-selected after removal
+                      e.target.value = ''
+                    }}
+                  />
+
+                  {/* Staged image previews */}
+                  {commentImages.length > 0 && (
+                    <div className="flex flex-wrap gap-2 p-2 bg-gray-50 rounded-lg border border-gray-200">
+                      {commentImages.map((img, idx) => (
+                        <div key={idx} className="relative group">
+                          <img
+                            src={URL.createObjectURL(img)}
+                            alt={img.name}
+                            className="w-20 h-20 object-cover rounded-lg border border-gray-200 shadow-sm"
+                          />
+                          <button
+                            type="button"
+                            onClick={() => setCommentImages(prev => prev.filter((_, i) => i !== idx))}
+                            className="absolute -top-1.5 -right-1.5 bg-red-500 text-white rounded-full w-5 h-5 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity shadow"
+                            title="Remove"
+                          >
+                            <X className="w-3 h-3" />
+                          </button>
+                          <span className="block text-xs text-gray-400 text-center mt-0.5 max-w-[5rem] truncate">{img.name}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+
+                  {/* Attach images button */}
+                  <button
+                    type="button"
+                    onClick={() => commentImageInputRef.current?.click()}
+                    className="flex items-center gap-1.5 text-xs text-gray-500 hover:text-blue-600 transition-colors px-2 py-1 rounded-md hover:bg-blue-50"
+                  >
+                    <ImagePlus className="w-3.5 h-3.5" />
+                    Attach images
+                    {commentImages.length > 0 && (
+                      <span className="ml-1 bg-blue-100 text-blue-700 rounded-full px-1.5 py-0.5 text-xs font-medium">
+                        {commentImages.length}
+                      </span>
+                    )}
+                  </button>
+                </div>
+
                 {isAgent && (
                   <div className="flex flex-wrap gap-4 text-sm">
                     <label className="flex items-center gap-2 cursor-pointer">
@@ -298,12 +404,18 @@ export default function TicketDetailPage() {
                   </div>
                 )}
                 <div className="flex justify-end">
-                  <button type="submit" disabled={isSubmitting || !commentBody.trim()} className="btn-primary">
-                    {isSubmitting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Send className="w-4 h-4" />}
-                    {isSubmitting ? 'Sending…' : 'Send Reply'}
+                  <button type="submit" disabled={isSubmitting || isUploadingImages || !commentBody.trim()} className="btn-primary">
+                    {isUploadingImages ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</>
+                    ) : isSubmitting ? (
+                      <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                    ) : (
+                      <><Send className="w-4 h-4" /> Send Reply</>
+                    )}
                   </button>
                 </div>
               </form>
+              )}
             </div>
           )}
 

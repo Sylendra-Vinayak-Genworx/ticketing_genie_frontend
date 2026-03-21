@@ -43,6 +43,21 @@ export const ticketService = {
     return res.data
   },
 
+  /**
+   * Upload a single file to GCS via the backend for use in a comment.
+   * Returns the blob_path to include in the comment's attachments list.
+   */
+  async uploadCommentAttachment(file: File): Promise<AttachmentUploadResponse> {
+    const formData = new FormData()
+    formData.append('file', file)
+    const res = await ticketingApi.post<AttachmentUploadResponse>(
+      '/tickets/comments/attachments/upload',
+      formData,
+      { headers: { 'Content-Type': 'multipart/form-data' } }
+    )
+    return res.data
+  },
+
   async getMyTickets(params: TicketFilterParams): Promise<PaginatedResponse<TicketBrief>> {
     const res = await ticketingApi.get<PaginatedResponse<TicketBrief>>('/tickets/me', { params })
     return res.data

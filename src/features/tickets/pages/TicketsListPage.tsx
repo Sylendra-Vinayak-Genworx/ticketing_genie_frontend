@@ -525,7 +525,7 @@ export default function TicketsListPage() {
                 {canSeeAll && <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Assignee</th>}
                 {isAdmin   && <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Team</th>}
                 <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Updated</th>
-                {canSeeAll && <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Action</th>}
+                {role === 'team_lead' && <th className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">Action</th>}
               </tr>
             </thead>
             <tbody className="divide-y divide-gray-50">
@@ -607,7 +607,7 @@ export default function TicketsListPage() {
                         <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
                           {formatRelative(ticket.updated_at)}
                         </td>
-                        {canSeeAll && (
+                        {role === 'team_lead' && (
                           <td className="px-4 py-3">
                             {ticket.assignee_id ? (
                               <button

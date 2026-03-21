@@ -120,6 +120,7 @@ export interface AddCommentRequest {
   triggers_hold: boolean
   triggers_resume: boolean
   ticket_id: number
+  attachments?: string[]
 }
 
 export interface AssignTicketRequest {
