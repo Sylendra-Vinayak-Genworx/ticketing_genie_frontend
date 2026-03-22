@@ -85,7 +85,7 @@ export default function CreateTicketPage() {
 
       setLoadingSimilar(true)
       try {
-        const response = await similarityService.searchSimilar(searchText, 5, 0.5)
+        const response = await similarityService.searchSimilar(searchText, 5, 0.3)
         setSimilarTickets(response.similar_tickets)
         
         if (response.found_count > 0) {

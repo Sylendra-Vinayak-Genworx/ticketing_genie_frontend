@@ -36,7 +36,7 @@ export const similarityService = {
   async searchSimilar(
     query: string,
     limit: number = 5,
-    minSimilarity: number = 0.5
+    minSimilarity: number = 0.3
   ): Promise<SimilaritySearchResponse> {
     try {
       const response = await ticketingApi.get<SimilaritySearchResponse>(
