@@ -37,11 +37,12 @@ export function useTicketDetailPage(ticketId: number | undefined) {
   const [isInternal, setIsInternal]         = useState(false)
   const [triggersHold, setTriggersHold]     = useState(false)
   const [triggersResume, setTriggersResume] = useState(false)
+  const [selfEscalate, setSelfEscalate]     = useState(false)
 
   // Comment image attachments
-  const [commentImages, setCommentImages]           = useState<File[]>([])
-  const [isUploadingImages, setIsUploadingImages]   = useState(false)
-  const commentImageInputRef                        = useRef<HTMLInputElement>(null)
+  const [commentImages, setCommentImages]         = useState<File[]>([])
+  const [isUploadingImages, setIsUploadingImages] = useState(false)
+  const commentImageInputRef                      = useRef<HTMLInputElement>(null)
 
   // Status modal
   const [statusModalOpen, setStatusModalOpen] = useState(false)
@@ -78,7 +79,6 @@ export function useTicketDetailPage(ticketId: number | undefined) {
       area_of_concern: currentTicket.area_of_concern,
     })
 
-    // Resolve all unique user IDs from timeline events
     const UUID_RE = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
     const actorIds = [
       ...new Set([
@@ -89,7 +89,6 @@ export function useTicketDetailPage(ticketId: number | undefined) {
           .filter((e: any) => e.event_type === 'ASSIGNED')
           .flatMap((e: any) => [e.new_value, e.old_value])
           .filter((v: any): v is string => !!v && UUID_RE.test(v)),
-        // Resolve comment authors so the conversation tab shows names not UUIDs
         ...currentTicket.comments
           .map((c: any) => c.author_id)
           .filter((id: any): id is string => !!id && UUID_RE.test(id)),
@@ -147,12 +146,27 @@ export function useTicketDetailPage(ticketId: number | undefined) {
 
     const result = await addComment(currentTicket.ticket_id, data)
     if ((result as any).payload?.comment_id) {
-      toast.success('Comment added')
+      // If self-escalate is checked, call the escalate endpoint after the comment
+      if (selfEscalate) {
+        try {
+          await ticketService.selfEscalate(
+            currentTicket.ticket_id,
+            `Escalated by agent with comment: ${commentBody.trim().slice(0, 120)}`,
+          )
+          toast.success('Comment added and ticket escalated')
+        } catch (err: any) {
+          toast.error(err?.response?.data?.detail || 'Comment sent but escalation failed')
+        }
+      } else {
+        toast.success('Comment added')
+      }
       setCommentBody('')
       setIsInternal(false)
       setTriggersHold(false)
       setTriggersResume(false)
+      setSelfEscalate(false)
       setCommentImages([])
+      fetchById(currentTicket.ticket_id)
     } else {
       toast.error((result as any).payload || 'Failed to add comment')
     }
@@ -234,6 +248,7 @@ export function useTicketDetailPage(ticketId: number | undefined) {
     isInternal, setIsInternal,
     triggersHold, setTriggersHold,
     triggersResume, setTriggersResume,
+    selfEscalate, setSelfEscalate,
     handleAddComment,
     commentImages, setCommentImages,
     isUploadingImages,

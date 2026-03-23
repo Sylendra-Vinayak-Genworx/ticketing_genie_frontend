@@ -1,13 +1,4 @@
-
 import {ticketingApi} from '@/lib/axios';
-
-export interface SolutionComment {
-  comment_id: number;
-  comment_text: string;
-  created_at: string;
-  created_by_name?: string;
-  is_internal: boolean;
-}
 
 export interface SimilarTicket {
   ticket_id: number;
@@ -20,7 +11,7 @@ export interface SimilarTicket {
   product: string;
   created_at: string | null;
   similarity_score: number;
-  solution_comments: SolutionComment[];
+  solution_text: string; // AI-summarized solution with masked sensitive data
 }
 
 export interface SimilaritySearchResponse {

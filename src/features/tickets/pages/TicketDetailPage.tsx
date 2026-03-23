@@ -1,8 +1,9 @@
-import React, { useState, useRef } from 'react'
+import React, { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import {
   ChevronLeft, Send, Lock, RefreshCw, Loader2, UserCheck,
   MessageSquare, History, Info, Paperclip, AlertTriangle, X, Download, ImagePlus,
+  TrendingUp,
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
@@ -42,15 +43,16 @@ function AttachmentPreview({
   const isImage = isImageFile(attachment.file_name)
   const displayName = cleanFileName(attachment.file_name)
 
+  const stopProp = (e: React.MouseEvent) => { e.stopPropagation() }
+
   return (
-    // Backdrop — click outside to close
     <div
       className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm p-4"
       onClick={onClose}
     >
       <div
         className="relative bg-white rounded-2xl shadow-2xl w-full max-w-4xl max-h-[90vh] flex flex-col overflow-hidden"
-        onClick={(e) => e.stopPropagation()}   // prevent backdrop click propagation
+        onClick={stopProp}
       >
         {/* Modal header */}
         <div className="flex items-center justify-between px-5 py-3 border-b border-gray-100 flex-shrink-0">
@@ -64,7 +66,7 @@ function AttachmentPreview({
               download={attachment.file_name}
               className="p-2 rounded-lg text-gray-500 hover:bg-gray-100 hover:text-gray-700 transition-colors"
               title="Download"
-              onClick={(e) => e.stopPropagation()}
+              onClick={stopProp}
             >
               <Download className="w-4 h-4" />
             </a>
@@ -116,6 +118,7 @@ export default function TicketDetailPage() {
     isInternal, setIsInternal,
     triggersHold, setTriggersHold,
     triggersResume, setTriggersResume,
+    selfEscalate, setSelfEscalate,
     handleAddComment,
     commentImages, setCommentImages,
     isUploadingImages,
@@ -341,7 +344,6 @@ export default function TicketDetailPage() {
                         const fresh = chosen.filter(f => !existing.has(f.name + f.size))
                         return [...prev, ...fresh]
                       })
-                      // Reset so the same file can be re-selected after removal
                       e.target.value = ''
                     }}
                   />
@@ -387,28 +389,67 @@ export default function TicketDetailPage() {
                 </div>
 
                 {isAgent && (
-                  <div className="flex flex-wrap gap-4 text-sm">
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={isInternal} onChange={(e) => setIsInternal(e.target.checked)} className="text-blue-600 rounded" />
-                      <Lock className="w-3.5 h-3.5 text-gray-400" />
-                      <span className="text-gray-600">Internal note</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={triggersHold} onChange={(e) => { setTriggersHold(e.target.checked); if (e.target.checked) setTriggersResume(false) }} className="text-yellow-600 rounded" />
-                      <span className="text-gray-600">Put On Hold</span>
-                    </label>
-                    <label className="flex items-center gap-2 cursor-pointer">
-                      <input type="checkbox" checked={triggersResume} onChange={(e) => { setTriggersResume(e.target.checked); if (e.target.checked) setTriggersHold(false) }} className="text-green-600 rounded" />
-                      <span className="text-gray-600">Resume SLA</span>
-                    </label>
+                  <div className="space-y-3">
+                    <div className="flex flex-wrap gap-4 text-sm">
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={isInternal} onChange={(e) => setIsInternal(e.target.checked)} className="text-blue-600 rounded" />
+                        <Lock className="w-3.5 h-3.5 text-gray-400" />
+                        <span className="text-gray-600">Internal note</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={triggersHold} onChange={(e) => { setTriggersHold(e.target.checked); if (e.target.checked) setTriggersResume(false) }} className="text-yellow-600 rounded" />
+                        <span className="text-gray-600">Put On Hold</span>
+                      </label>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <input type="checkbox" checked={triggersResume} onChange={(e) => { setTriggersResume(e.target.checked); if (e.target.checked) setTriggersHold(false) }} className="text-green-600 rounded" />
+                        <span className="text-gray-600">Resume SLA</span>
+                      </label>
+                    </div>
+
+                    {!t.is_escalated && !['RESOLVED', 'CLOSED'].includes(t.status) && (
+                      <div className="border-t border-gray-100 pt-3">
+                        <label className="flex items-start gap-2.5 cursor-pointer">
+                          <input
+                            type="checkbox"
+                            checked={selfEscalate}
+                            onChange={(e) => setSelfEscalate(e.target.checked)}
+                            className="mt-0.5 text-orange-500 rounded border-gray-300 focus:ring-orange-400"
+                          />
+                          <div>
+                            <div className="flex items-center gap-1.5">
+                              <TrendingUp className="w-3.5 h-3.5 text-orange-500" />
+                              <span className="text-sm font-medium text-orange-700">Escalate ticket</span>
+                            </div>
+                            <p className="text-xs text-gray-500 mt-0.5">
+                              Submits your comment and escalates this ticket to the team lead's queue for urgent review.
+                            </p>
+                          </div>
+                        </label>
+                        {selfEscalate && (
+                          <div className="mt-2 flex items-start gap-2 rounded-md bg-orange-50 border border-orange-200 px-3 py-2">
+                            <AlertTriangle className="w-3.5 h-3.5 text-orange-500 flex-shrink-0 mt-0.5" />
+                            <p className="text-xs text-orange-700">
+                              This ticket will be moved to the lead's team queue and the assignee will be cleared. A lead will be notified immediately.
+                            </p>
+                          </div>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
+
                 <div className="flex justify-end">
-                  <button type="submit" disabled={isSubmitting || isUploadingImages || !commentBody.trim()} className="btn-primary">
+                  <button
+                    type="submit"
+                    disabled={isSubmitting || isUploadingImages || !commentBody.trim()}
+                    className={`btn-primary ${selfEscalate ? 'bg-orange-600 hover:bg-orange-700 focus:ring-orange-500' : ''}`}
+                  >
                     {isUploadingImages ? (
                       <><Loader2 className="w-4 h-4 animate-spin" /> Uploading…</>
                     ) : isSubmitting ? (
-                      <><Loader2 className="w-4 h-4 animate-spin" /> Sending…</>
+                      <><Loader2 className="w-4 h-4 animate-spin" /> {selfEscalate ? 'Escalating…' : 'Sending…'}</>
+                    ) : selfEscalate ? (
+                      <><TrendingUp className="w-4 h-4" /> Send & Escalate</>
                     ) : (
                       <><Send className="w-4 h-4" /> Send Reply</>
                     )}

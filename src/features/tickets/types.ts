@@ -140,3 +140,26 @@ export interface TicketFilterParams extends PaginationParams {
   queue_type?: string
   routing_status?: string
 }
+
+// ─── Create Ticket Form Types ────────────────────────────────────────────────
+
+export interface CreateTicketFormData {
+  title: string
+  description: string
+  product: string
+  environment: Environment
+  area_of_concern: string
+  source: 'UI' | 'EMAIL'
+}
+
+export interface CreateTicketFormErrors {
+  title?: string
+  description?: string
+}
+
+export interface UploadedFile {
+  file: File
+  blobPath: string
+  uploading: boolean
+  error?: string
+}

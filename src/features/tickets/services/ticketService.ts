@@ -28,10 +28,6 @@ export const ticketService = {
     return res.data
   },
 
-  /**
-   * Upload a single file to GCS via the backend.
-   * Returns the public file_url to include in the ticket's attachments list.
-   */
   async uploadAttachment(file: File): Promise<AttachmentUploadResponse> {
     const formData = new FormData()
     formData.append('file', file)
@@ -43,10 +39,6 @@ export const ticketService = {
     return res.data
   },
 
-  /**
-   * Upload a single file to GCS via the backend for use in a comment.
-   * Returns the blob_path to include in the comment's attachments list.
-   */
   async uploadCommentAttachment(file: File): Promise<AttachmentUploadResponse> {
     const formData = new FormData()
     formData.append('file', file)
@@ -90,6 +82,12 @@ export const ticketService = {
 
   async getAreasOfConcern(): Promise<AreaOfConcern[]> {
     const res = await ticketingApi.get<AreaOfConcern[]>('/areas-of-concern')
+    return res.data
+  },
+
+  async selfEscalate(id: number, reason?: string): Promise<TicketBrief> {
+    const params = reason ? { reason } : {}
+    const res = await ticketingApi.post<TicketBrief>(`/tickets/${id}/escalate`, {}, { params })
     return res.data
   },
 }

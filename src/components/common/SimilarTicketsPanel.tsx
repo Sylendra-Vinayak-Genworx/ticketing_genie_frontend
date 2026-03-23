@@ -93,10 +93,9 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
                       <div className="font-medium text-gray-900 text-sm mb-1">
                         {ticket.title}
                       </div>
-                      {ticket.solution_comments.length > 0 && (
+                      {ticket.solution_text && (
                         <div className="text-xs text-green-700 font-medium">
-                          ✓ {ticket.solution_comments.length} solution comment
-                          {ticket.solution_comments.length > 1 ? 's' : ''} available
+                          ✓ AI-generated solution available
                         </div>
                       )}
                     </div>
@@ -105,16 +104,6 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
                 </div>
               ))}
             </div>
-
-            {similarTickets.length > 3 && (
-              <button
-                type="button"
-                className="text-sm text-blue-700 hover:text-blue-900 font-semibold mt-3 hover:underline"
-                onClick={() => openTicketModal(similarTickets[0])}
-              >
-                View all {similarTickets.length} similar tickets →
-              </button>
-            )}
           </div>
         </div>
       </div>
@@ -177,42 +166,28 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
                 </p>
               </div>
 
-              {selectedTicket.solution_comments.length > 0 && (
+              {selectedTicket.solution_text && (
                 <div>
                   <h3 className="text-sm font-semibold text-gray-700 mb-3 flex items-center gap-2">
                     <CheckCircle className="h-5 w-5 text-green-600" />
-                    Solutions ({selectedTicket.solution_comments.length}):
+                    AI-Generated Solution:
                   </h3>
-                  <div className="space-y-3">
-                    {selectedTicket.solution_comments.map((comment, idx) => (
-                      <div
-                        key={comment.comment_id}
-                        className="bg-green-50 border border-green-200 rounded-lg p-4"
-                      >
-                        <p className="text-sm text-gray-800 whitespace-pre-wrap mb-2">
-                          {comment.comment_text}
-                        </p>
-                        <div className="flex items-center justify-between text-xs text-gray-600">
-                          {comment.created_by_name && (
-                            <span className="font-medium">
-                              By {comment.created_by_name}
-                            </span>
-                          )}
-                          {comment.created_at && (
-                            <span>
-                              {formatDistanceToNow(new Date(comment.created_at), { addSuffix: true })}
-                            </span>
-                          )}
-                        </div>
-                      </div>
-                    ))}
+                  <div className="bg-green-50 border border-green-200 rounded-lg p-4">
+                    <p className="text-sm text-gray-800 whitespace-pre-wrap leading-relaxed">
+                      {selectedTicket.solution_text}
+                    </p>
+                    <div className="mt-3 pt-3 border-t border-green-200">
+                      <p className="text-xs text-gray-600 italic">
+                        💡 This solution was AI-generated and summarized from resolved ticket comments. Sensitive data has been automatically masked for privacy.
+                      </p>
+                    </div>
                   </div>
                 </div>
               )}
 
-              {selectedTicket.solution_comments.length === 0 && (
+              {!selectedTicket.solution_text && (
                 <div className="text-center py-6 text-gray-500 text-sm">
-                  No solution comments found for this ticket.
+                  No solution available for this ticket yet.
                 </div>
               )}
             </div>

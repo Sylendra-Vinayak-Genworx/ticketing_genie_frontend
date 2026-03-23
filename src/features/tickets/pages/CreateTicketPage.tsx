@@ -1,42 +1,17 @@
-import React, { useRef, useState, useEffect, useCallback } from 'react'
+import React, { useRef } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { ChevronLeft, Loader2, Lock, Paperclip, X, CheckCircle } from 'lucide-react'
 import { useTickets } from '@/features/tickets/hooks/useTickets'
 import { useAreasOfConcern } from '@/features/tickets/hooks/useAreasOfConcern'
 import { PageHeader } from '@/components/common/PageHeader'
-import { createTicketThunk } from '@/features/tickets/slices/ticketsSlice'
-import { ticketService } from '@/features/tickets/services/ticketService'
 import toast from 'react-hot-toast'
 import type { Environment, Ticket } from '@/types'
 
-// NEW: Import similarity search
-import { similarityService, SimilarTicket } from '@/features/tickets/services/similarityService'
 import { SimilarTicketsPanel } from '@/components/common/SimilarTicketsPanel'
-import debounce from 'lodash/debounce'
-
-interface FormData {
-  title: string
-  description: string
-  product: string
-  environment: Environment
-  area_of_concern: string
-  source: 'UI' | 'EMAIL'
-}
-
-interface FormErrors {
-  title?: string
-  description?: string
-}
-
-interface UploadedFile {
-  file: File
-  blobPath: string   // raw GCS object path — sent to backend in attachments[]
-  uploading: boolean
-  error?: string
-}
-
-const ALLOWED_TYPES = ['image/jpeg', 'image/png', 'image/gif', 'image/webp']
-const MAX_SIZE_MB = 10
+import { useCreateTicketForm } from '@/features/tickets/hooks/useCreateTicketForm'
+import { useTicketAttachments } from '@/features/tickets/hooks/useTicketAttachments'
+import { useSimilarTicketsSearch } from '@/features/tickets/hooks/useSimilarTicketsSearch'
+import { ALLOWED_FILE_TYPES, MAX_FILE_SIZE_MB } from '@/features/tickets/utils/constants'
 
 export default function CreateTicketPage() {
   const navigate = useNavigate()
@@ -44,156 +19,52 @@ export default function CreateTicketPage() {
   const { areas, isLoading: areasLoading } = useAreasOfConcern()
   const fileInputRef = useRef<HTMLInputElement>(null)
 
-  const [form, setForm] = useState<FormData>({
-    title: '',
-    description: '',
-    product: 'bookmyticket',
-    environment: 'PROD',
-    area_of_concern: '',
-    source: 'UI',
-  })
-  const [errors, setErrors] = useState<FormErrors>({})
-  const [uploadedFiles, setUploadedFiles] = useState<UploadedFile[]>([])
+  const { form, errors, setFormField: set, validateForm, clearDraft } = useCreateTicketForm()
+  
+  const { 
+    uploadedFiles, 
+    handleFileSelect, 
+    removeFile, 
+    isAnyUploading, 
+    hasUploadErrors 
+  } = useTicketAttachments()
 
-  // NEW: Similarity search state
-  const [similarTickets, setSimilarTickets] = useState<SimilarTicket[]>([])
-  const [loadingSimilar, setLoadingSimilar] = useState(false)
-  const [solutionFound, setSolutionFound] = useState(false)
+  const {
+    similarTickets,
+    loadingSimilar,
+    solutionFound,
+    handleSolutionFound,
+  } = useSimilarTicketsSearch(form.title, form.description)
 
-  function set<K extends keyof FormData>(key: K, value: FormData[K]) {
-    setForm(f => ({ ...f, [key]: value }))
-    if (errors[key as keyof FormErrors]) setErrors(e => ({ ...e, [key]: undefined }))
-  }
-
-  function validate(): boolean {
-    const e: FormErrors = {}
-    if (!form.title.trim() || form.title.length < 3)
-      e.title = 'Title must be at least 3 characters'
-    if (!form.description.trim() || form.description.length < 10)
-      e.description = 'Description must be at least 10 characters'
-    setErrors(e)
-    return Object.keys(e).length === 0
-  }
-
-  // NEW: Debounced similarity search
-  const searchSimilarTickets = useCallback(
-    debounce(async (searchText: string) => {
-      if (searchText.trim().length < 10) {
-        setSimilarTickets([])
-        return
-      }
-
-      setLoadingSimilar(true)
-      try {
-        const response = await similarityService.searchSimilar(searchText, 5, 0.3)
-        setSimilarTickets(response.similar_tickets)
-        
-        if (response.found_count > 0) {
-          console.log(`✓ Found ${response.found_count} similar tickets`)
-        }
-      } catch (error) {
-        console.error('Similarity search failed:', error)
-        setSimilarTickets([])
-      } finally {
-        setLoadingSimilar(false)
-      }
-    }, 1000),
-    []
-  )
-
-  // NEW: Trigger search when form changes
-  useEffect(() => {
-    const combinedText = `${form.title} ${form.description}`.trim()
-    if (combinedText.length >= 10) {
-      searchSimilarTickets(combinedText)
-    } else {
-      setSimilarTickets([])
-    }
-  }, [form.title, form.description, searchSimilarTickets])
-
-  // NEW: Handle when user finds solution
-  const handleSolutionFound = () => {
-    setSolutionFound(true)
-    toast.success('Great! The solution helped. No need to create a ticket. 🎉', {
-      duration: 4000,
-    })
-    setTimeout(() => {
-      navigate('/tickets')
-    }, 2000)
-  }
-
-  async function handleFileSelect(e: React.ChangeEvent<HTMLInputElement>) {
+  function handleFileInputChange(e: React.ChangeEvent<HTMLInputElement>) {
     const files = Array.from(e.target.files || [])
     if (!files.length) return
-
-    // Reset input so the same file can be re-selected after removal
+    handleFileSelect(files)
     e.target.value = ''
-
-    for (const file of files) {
-      if (!ALLOWED_TYPES.includes(file.type)) {
-        toast.error(`"${file.name}" is not a supported image type (JPEG, PNG, GIF, WEBP).`)
-        continue
-      }
-      if (file.size > MAX_SIZE_MB * 1024 * 1024) {
-        toast.error(`"${file.name}" exceeds the ${MAX_SIZE_MB} MB size limit.`)
-        continue
-      }
-
-      // Add a placeholder row while uploading
-      const placeholder: UploadedFile = { file, blobPath: '', uploading: true }
-      setUploadedFiles(prev => [...prev, placeholder])
-
-      try {
-        const result = await ticketService.uploadAttachment(file)
-        setUploadedFiles(prev =>
-          prev.map(f =>
-            // Store blob_path — NOT file_url (which is a signed URL and too long for the DB)
-            f.file === file ? { file, blobPath: result.blob_path, uploading: false } : f
-          )
-        )
-      } catch {
-        setUploadedFiles(prev =>
-          prev.map(f =>
-            f.file === file
-              ? { file, blobPath: '', uploading: false, error: 'Upload failed' }
-              : f
-          )
-        )
-        toast.error(`Failed to upload "${file.name}". Please try again.`)
-      }
-    }
   }
 
   function handleDrop(e: React.DragEvent<HTMLDivElement>) {
     e.preventDefault()
     const dt = e.dataTransfer
     if (dt.files.length) {
-      const fakeEvent = { target: { files: dt.files, value: '' } } as unknown as React.ChangeEvent<HTMLInputElement>
-      handleFileSelect(fakeEvent)
+      handleFileSelect(Array.from(dt.files))
     }
-  }
-
-  function removeFile(index: number) {
-    setUploadedFiles(prev => prev.filter((_, i) => i !== index))
   }
 
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault()
-    if (!validate()) return
+    if (!validateForm()) return
 
-    const pendingUploads = uploadedFiles.filter(f => f.uploading)
-    if (pendingUploads.length > 0) {
+    if (isAnyUploading) {
       toast.error('Please wait for all files to finish uploading.')
       return
     }
 
-    const failedUploads = uploadedFiles.filter(f => f.error)
-    if (failedUploads.length > 0) {
+    if (hasUploadErrors) {
       toast.error('Remove failed uploads before submitting.')
       return
     }
 
-    // Send blob_path (raw GCS object path) — backend strips and signs on read
     const attachmentUrls = uploadedFiles.map(f => f.blobPath).filter(Boolean)
 
     const result = await create({
@@ -206,16 +77,13 @@ export default function CreateTicketPage() {
       attachments: attachmentUrls,
     })
 
-    // FIX: Properly type check the Redux action result
-    // The result is a Redux action with meta and payload
     if (result && 'meta' in result && result.meta.requestStatus === 'fulfilled') {
+      clearDraft()
       const ticket = result.payload as Ticket
       toast.success('Ticket created successfully!')
       navigate(`/tickets/${ticket.ticket_id}`)
     }
   }
-
-  const isAnyUploading = uploadedFiles.some(f => f.uploading)
 
   return (
     <div>
@@ -303,7 +171,6 @@ export default function CreateTicketPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="bookmyticket">BookMyTicket</option>
-              <option value="other">Other</option>
             </select>
           </div>
 
@@ -319,15 +186,13 @@ export default function CreateTicketPage() {
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500"
             >
               <option value="PROD">Production</option>
-              <option value="STAGE">Staging</option>
-              <option value="DEV">Development</option>
             </select>
           </div>
 
           {/* Area of Concern */}
           <div>
             <label htmlFor="area_of_concern" className="block text-sm font-medium text-gray-700 mb-1">
-              Area of Concern
+              Issue Type
             </label>
             <select
               id="area_of_concern"
@@ -336,7 +201,7 @@ export default function CreateTicketPage() {
               disabled={areasLoading}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
             >
-              <option value="">Select an area (optional)</option>
+              <option value="">Select an issue type (optional)</option>
               {areas.map(area => (
                 <option key={area.area_id} value={area.area_id}>
                   {area.name}
@@ -360,14 +225,14 @@ export default function CreateTicketPage() {
                 Drag & drop images here, or click to select
               </p>
               <p className="text-xs text-gray-500 mb-3">
-                JPEG, PNG, GIF, WEBP • Max {MAX_SIZE_MB}MB each
+                JPEG, PNG, GIF, WEBP • Max {MAX_FILE_SIZE_MB}MB each
               </p>
               <input
                 ref={fileInputRef}
                 type="file"
                 multiple
-                accept={ALLOWED_TYPES.join(',')}
-                onChange={handleFileSelect}
+                accept={ALLOWED_FILE_TYPES.join(',')}
+                onChange={handleFileInputChange}
                 className="hidden"
               />
               <button
