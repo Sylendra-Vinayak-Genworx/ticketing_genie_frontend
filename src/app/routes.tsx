@@ -1,7 +1,7 @@
 import React, { lazy, Suspense, useEffect } from 'react'
-import { Routes, Route, Navigate, useNavigate } from 'react-router-dom'
+import { Routes, Route, Navigate } from 'react-router-dom'
 import { useAuth } from '@/features/auth'
-import { getMeThunk } from '@/features/auth/slices/authSlice'
+import { getMeThunk, refreshTokenThunk, logout } from '@/features/auth/slices/authSlice'
 import { useAppDispatch } from '@/hooks'
 import DashboardLayout from '@/layouts/DashboardLayout'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
@@ -29,7 +29,9 @@ const SubscriptionPage   =lazy(() =>import('@/features/subscription/pages/Subscr
 const EmailConfigPage      = lazy(() => import('@/features/email-config/pages/EmailConfigPage'))
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
+  // While a refresh attempt is in progress, show a spinner instead of redirecting
+  if (isLoading) return <LoadingSpinner fullPage text="Restoring session…" />
   if (!isAuthenticated) return <Navigate to="/login" replace />
   return <>{children}</>
 }
@@ -41,17 +43,37 @@ function RoleRoute({ children, roles }: { children: React.ReactNode; roles: stri
 }
 
 function PublicOnlyRoute({ children }: { children: React.ReactNode }) {
-  const { isAuthenticated } = useAuth()
+  const { isAuthenticated, isLoading } = useAuth()
+  if (isLoading) return <LoadingSpinner fullPage text="Restoring session…" />
   if (isAuthenticated) return <Navigate to="/dashboard" replace />
   return <>{children}</>
 }
 
 function AuthInitializer() {
   const dispatch = useAppDispatch()
-  const { isAuthenticated, user } = useAuth()
+  const { isAuthenticated, user, isLoading } = useAuth()
+
   useEffect(() => {
-    if (isAuthenticated && !user) dispatch(getMeThunk())
+    // Case 1: Token is valid and we just need user profile
+    if (isAuthenticated && !user) {
+      dispatch(getMeThunk())
+      return
+    }
+
+    // Case 2: Access token expired — attempt silent refresh via refresh token cookie
+    if (!isAuthenticated && isLoading) {
+      dispatch(refreshTokenThunk()).then((result) => {
+        if (refreshTokenThunk.fulfilled.match(result)) {
+          // Refresh succeeded — fetch user profile
+          dispatch(getMeThunk())
+        } else {
+          // Refresh failed — full logout (clears stale localStorage tokens)
+          dispatch(logout())
+        }
+      })
+    }
   }, [isAuthenticated])
+
   return null
 }
 

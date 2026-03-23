@@ -78,23 +78,20 @@ export const getMeThunk = createAsyncThunk(
 const storedToken  = localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN)
 const storedExpiry = localStorage.getItem(TOKEN_KEYS.TOKEN_EXPIRY)
 
-// Only treat the stored token as valid if it hasn't expired yet.
-// An expired token causes the middleware to immediately redirect to /dashboard
-// and then get bounced back to /login — clearing the stale values here
-// avoids that redirect loop entirely.
+// A stored token that hasn't expired yet can be used immediately.
 const isTokenValid = !!storedToken && !!storedExpiry && Date.now() < Number(storedExpiry)
 
-if (!isTokenValid && storedToken) {
-  // Proactively clear stale tokens so the app starts from a clean slate
-  localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN)
-  localStorage.removeItem(TOKEN_KEYS.TOKEN_EXPIRY)
-}
+// If a token was stored but has expired, we can still attempt a silent refresh
+// using the HTTP-only refresh_token cookie (managed by the server).
+// Don't clear localStorage yet — the refresh attempt in AuthInitializer will
+// either succeed (updating the token) or fail (triggering a full logout).
+const canAttemptRefresh = !!storedToken && !isTokenValid
 
 const initialState: AuthState = {
   user: null,
   access_token: isTokenValid ? storedToken : null,
   isAuthenticated: isTokenValid,
-  isLoading: false,
+  isLoading: canAttemptRefresh,   // show loading spinner while refreshing
   error: null,
 }
 
@@ -142,11 +139,16 @@ const authSlice = createSlice({
     builder
       .addCase(refreshTokenThunk.fulfilled, (state, action) => {
         state.access_token = action.payload.access_token
+        state.isAuthenticated = true
+        state.isLoading = false
       })
       .addCase(refreshTokenThunk.rejected, (state) => {
         state.user = null
         state.access_token = null
         state.isAuthenticated = false
+        state.isLoading = false
+        localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN)
+        localStorage.removeItem(TOKEN_KEYS.TOKEN_EXPIRY)
       })
 
     // GetMe
@@ -160,10 +162,10 @@ const authSlice = createSlice({
         state.isLoading = true
       })
       .addCase(getMeThunk.rejected, (state) => {
+        // Don't clear isAuthenticated here — the axios interceptor may still
+        // be refreshing the token and retrying. Only explicit logout or
+        // refreshTokenThunk.rejected should clear auth state.
         state.isLoading = false
-        state.isAuthenticated = false
-        state.access_token = null
-        localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN)
       })
   },
 })

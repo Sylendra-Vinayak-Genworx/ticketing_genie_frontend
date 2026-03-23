@@ -60,6 +60,7 @@ export type {
 export type {
   TeamMember, Team, TeamListResponse, TeamCreateRequest, AddMemberRequest,
   AgentSkill, AgentSkillUpdateRequest, AgentSkillListResponse,
+  TabView, ModalMode, SkillForm,
 } from '@/features/users/types'
 
 export type {

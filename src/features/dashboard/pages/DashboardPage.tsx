@@ -456,12 +456,7 @@ export default function DashboardPage() {
                     <option value="">All Severities</option>
                     {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
                   </select>
-                  {products.length > 0 && (
-                    <select value={filters.product} onChange={e => { setFilters(f => ({ ...f, product: e.target.value })); setSrPage(1) }} className="input-field w-auto min-w-[130px]">
-                      <option value="">All Products</option>
-                      {products.map(p => <option key={p} value={p}>{p}</option>)}
-                    </select>
-                  )}
+
                   <input type="date" value={filters.date_from} title="From date" onChange={e => { setFilters(f => ({ ...f, date_from: e.target.value })); setSrPage(1) }} className="input-field text-sm" />
                   <input type="date" value={filters.date_to} title="To date" onChange={e => { setFilters(f => ({ ...f, date_to: e.target.value })); setSrPage(1) }} className="input-field text-sm" />
                 </div>

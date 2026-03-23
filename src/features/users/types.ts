@@ -50,3 +50,13 @@ export interface AgentSkillUpdateRequest {
 export interface AgentSkillListResponse {
   skills: AgentSkill[]
 }
+
+// ─── UsersPage Types ──────────────────────────────────────────────────────────
+
+export type TabView = 'admin' | 'team_lead' | 'support_agent' | 'customers'
+export type ModalMode = 'view' | 'edit' | 'create' | 'skills' | null
+
+export interface SkillForm {
+  area_id: number
+  proficiency_level: string
+}
