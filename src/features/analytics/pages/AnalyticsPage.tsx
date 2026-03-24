@@ -4,6 +4,7 @@ import {
   PieChart, Pie, Cell, Legend,
 } from 'recharts'
 import { useAnalytics } from '@/features/analytics/hooks/useAnalytics'
+import { useAnalyticsChartData } from '@/features/analytics/hooks/useAnalyticsChartData'
 import { PageHeader } from '@/components/common/PageHeader'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { formatPercent } from '@/utils'
@@ -30,9 +31,7 @@ export default function AnalyticsPage() {
 
   const { summary, distribution, sla_compliance } = data
 
-  const statusData   = distribution.by_status.map(d => ({ name: d.label.replace('_', ' '), value: d.count }))
-  const severityData = distribution.by_severity.map(d => ({ name: d.label, value: d.count }))
-  const priorityData = distribution.by_priority.map(d => ({ name: d.label, value: d.count }))
+  const { statusData, severityData, priorityData } = useAnalyticsChartData(distribution)
 
   return (
     <div className="space-y-6">
@@ -102,7 +101,7 @@ export default function AnalyticsPage() {
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
               <Pie data={severityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                {severityData.map((_, i) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+                {severityData.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
               </Pie>
               <Legend iconType="circle" iconSize={8} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
@@ -119,7 +118,7 @@ export default function AnalyticsPage() {
               <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {priorityData.map((_, i) => <Cell key={i} fill={['#ef4444','#f97316','#3b82f6','#94a3b8'][i]} />)}
+                {priorityData.map((_: any, i: number) => <Cell key={i} fill={['#ef4444','#f97316','#3b82f6','#94a3b8'][i]} />)}
               </Bar>
             </BarChart>
           </ResponsiveContainer>

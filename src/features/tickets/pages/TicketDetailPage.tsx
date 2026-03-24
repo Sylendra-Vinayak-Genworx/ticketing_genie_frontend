@@ -7,23 +7,15 @@ import {
 } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
-import { SLATimer } from '@/components/ui/SLATimer'
+import { SLATimer } from '@/features/sla/components/SLATimer'
 import { Avatar } from '@/components/ui/Avatar'
 import { Modal, ConfirmModal } from '@/components/ui/Modal'
-import { StatusStepper } from '@/components/common/StatusStepper'
+import { StatusStepper } from '@/features/tickets/components/StatusStepper'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { formatDateTime, formatRelative } from '@/utils'
 import { useTicketDetailPage } from '../hooks/useTicketDetailPage'
 import type { TicketStatus } from '@/types'
-
-
-function cleanFileName(name: string): string {
-  return name.replace(/^[0-9a-f]{32}_/i, '').replace(/_/g, ' ')
-}
-
-function isImageFile(name: string): boolean {
-  return /\.(jpe?g|png|gif|webp)$/i.test(name)
-}
+import { cleanFileName, isImageFile } from '@/utils/fileHelpers'
 
 
 interface PreviewAtt {

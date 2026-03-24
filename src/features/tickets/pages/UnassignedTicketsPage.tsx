@@ -4,7 +4,7 @@ import { ClipboardList, RefreshCw, Search, AlertTriangle, Clock, UserPlus, Zap }
 import { useTickets } from '@/features/tickets/hooks/useTickets'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
-import { SLATimer } from '@/components/ui/SLATimer'
+import { SLATimer } from '@/features/sla/components/SLATimer'
 import { Pagination } from '@/components/common/Pagination'
 import { SkeletonRow, EmptyState } from '@/components/common/LoadingSpinner'
 import { formatRelative } from '@/utils'
