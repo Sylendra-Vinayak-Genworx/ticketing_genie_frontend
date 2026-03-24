@@ -12,11 +12,12 @@ import {
 import { useAuth } from '@/features/auth'
 import { useTickets } from '@/features/tickets/hooks/useTickets'
 import { useAnalytics } from '@/features/analytics/hooks/useAnalytics'
+import { useDashboardMetrics } from '@/features/dashboard/hooks/useDashboardMetrics'
 import { useDashboardSearch } from '@/features/dashboard/hooks/useDashboardSearch'
 import { EMPTY_FILTERS } from '@/features/dashboard/hooks/useDashboardSearch'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
-import { SLATimer } from '@/components/ui/SLATimer'
+import { SLATimer } from '@/features/sla/components/SLATimer'
 import { LoadingSpinner } from '@/components/common/LoadingSpinner'
 import { Pagination } from '@/components/common/Pagination'
 import { formatRelative, formatMinutes, formatPercent, formatDate } from '@/utils'
@@ -125,39 +126,24 @@ export default function DashboardPage() {
 
   // ── Derived values ───────────────────────────────────────────────────────
   const summary   = analytics?.summary
-  const dist      = analytics?.distribution
   const sla       = analytics?.sla_compliance
   const topAgents = analytics?.top_agents ?? []
 
-  // Counts derived from `list` — accurate because page_size=100 loads full dataset
-  // for users with ≤100 tickets. `total` from API is always the true total.
-  const openCount         = list.filter(t => t.status === 'OPEN').length
-  const progressCount     = list.filter(t => t.status === 'IN_PROGRESS').length
-  const breachedCount     = list.filter(t => t.is_breached).length
-  const resolvedCount     = list.filter(t => t.status === 'RESOLVED').length
-  const escalatedCount    = list.filter(t => t.is_escalated).length
-  const onHoldCount       = list.filter(t => t.status === 'ON_HOLD').length
-  const closedCount       = list.filter(t => t.status === 'CLOSED').length
-  const acknowledgedCount = list.filter(t => t.status === 'ACKNOWLEDGED').length
+  const { counts, recentTickets, chartData } = useDashboardMetrics({
+    list,
+    analytics,
+    recentSearch,
+    isPowerUser
+  })
 
-  const recentTickets = (recentSearch
-    ? list.filter(t =>
-        t.title.toLowerCase().includes(recentSearch.toLowerCase()) ||
-        t.ticket_number.toLowerCase().includes(recentSearch.toLowerCase()))
-    : list
-  ).slice(0, isPowerUser ? 6 : 10)
+  const {
+    openCount, progressCount, breachedCount, resolvedCount,
+    escalatedCount, onHoldCount, closedCount, acknowledgedCount
+  } = counts
 
-  const priorityData = dist?.by_priority.map(d => ({
-    name: d.label, tickets: d.count,
-    fill: d.label === 'P0' ? C.red : d.label === 'P1' ? C.orange : d.label === 'P2' ? C.amber : C.blue,
-  })) ?? []
-  const statusData   = dist?.by_status.map(d => ({ name: d.label.replace(/_/g, ' '), value: d.count })) ?? []
-  const severityData = dist?.by_severity.map(d => ({ name: d.label, value: d.count })) ?? []
-  const productData  = dist?.by_product.map(d => ({ name: d.label, tickets: d.count })) ?? []
-  const slaBarData   = sla ? [
-    { name: 'Response',   met: sla.response_sla_met,   breached: sla.response_sla_breached   },
-    { name: 'Resolution', met: sla.resolution_sla_met, breached: sla.resolution_sla_breached },
-  ] : []
+  const {
+    priorityData, statusData, severityData, productData, slaBarData
+  } = chartData
 
 
   return (

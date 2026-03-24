@@ -4,7 +4,7 @@ import { ListOrdered, RefreshCw, Search, Inbox, Zap, Clock, AlertTriangle } from
 import { useOpenQueue } from '@/features/tickets/hooks/useOpenQueue'
 import { PageHeader } from '@/components/common/PageHeader'
 import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
-import { SLATimer } from '@/components/ui/SLATimer'
+import { SLATimer } from '@/features/sla/components/SLATimer'
 import { Pagination } from '@/components/common/Pagination'
 import { SkeletonRow, EmptyState } from '@/components/common/LoadingSpinner'
 import { formatRelative } from '@/utils'
