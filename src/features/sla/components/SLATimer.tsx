@@ -17,6 +17,7 @@ interface SLATimerProps {
   resolvedAt?: string | null
   // The definitive backend timestamp for when resolution SLA was completed
   resolutionSlaCompletedAt?: string | null
+  updatedAt?: string | null
   compact?: boolean
 }
 
@@ -39,6 +40,7 @@ export function SLATimer({
   firstResponseAt,
   resolvedAt,
   resolutionSlaCompletedAt,
+  updatedAt,
   compact = false,
 }: SLATimerProps) {
   const [timeLeft, setTimeLeft] = useState<string>('')
@@ -54,27 +56,41 @@ export function SLATimer({
 
   // ── Completion timestamp ──────────────────────────────────────────────────
   // Priority order:
-  //   1. slaType='response'  → use firstResponseAt
-  //   2. slaType='resolution' → use resolutionSlaCompletedAt (backend field) or resolvedAt
-  //   3. No slaType (compact/list) → use resolutionSlaCompletedAt or resolvedAt
-  //      when ticket is in a terminal state
+  //   1. Explicit response/resolution timestamps from backend
+  //   2. Terminal states (CLOSED, RESOLVED) as fallbacks
   const completionTime: Date | null = (() => {
-    if (slaType === 'response' && firstResponseAt)
-      return new Date(firstResponseAt)
+    // If ticket is CLOSED, everything is considered done.
+    if (status === 'CLOSED') {
+      const ts = resolutionSlaCompletedAt || resolvedAt || firstResponseAt || updatedAt
+      if (ts) return new Date(ts)
+      return new Date() // Final fallback to now to stop ticker
+    }
+
+    if (slaType === 'response') {
+      if (firstResponseAt) return new Date(firstResponseAt)
+      // If it moves past OPEN, it has been responded to.
+      if (!['NEW', 'ACKNOWLEDGED', 'OPEN'].includes(status)) {
+        const ts = updatedAt || null
+        return ts ? new Date(ts) : new Date()
+      }
+      return null
+    }
 
     if (slaType === 'resolution') {
       const ts = resolutionSlaCompletedAt || resolvedAt
       if (ts) return new Date(ts)
+      if (status === 'RESOLVED') {
+        const fallbackTs = updatedAt || null
+        return fallbackTs ? new Date(fallbackTs) : new Date()
+      }
       return null
     }
 
     // Compact/list mode — no slaType.
-    // Use the backend's resolution_sla_completed_at as source of truth.
-    // Fall back to resolved_at if available.
-    // Only treat as completed when ticket is in a terminal state.
-    if (status === 'RESOLVED' || status === 'CLOSED') {
-      const ts = resolutionSlaCompletedAt || resolvedAt
+    if (status === 'RESOLVED') {
+      const ts = resolutionSlaCompletedAt || resolvedAt || updatedAt
       if (ts) return new Date(ts)
+      return new Date()
     }
 
     return null

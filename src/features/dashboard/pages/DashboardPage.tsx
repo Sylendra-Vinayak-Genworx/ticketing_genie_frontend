@@ -396,8 +396,8 @@ export default function DashboardPage() {
                                 resolutionDueAt={ticket.resolution_due_at}
                                 status={ticket.status}
                                 isBreached={ticket.is_breached}
-                                  resolvedAt={ticket.resolved_at}
                                  resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
+                                 updatedAt={ticket.updated_at}
                                 compact
                               />
                             </td>
@@ -499,6 +499,7 @@ export default function DashboardPage() {
                                   status={ticket.status}
                                   isBreached={ticket.is_breached}
                                    resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
+                                   updatedAt={ticket.updated_at}
                                   compact
                                 />
                               </td>
@@ -679,8 +680,8 @@ export default function DashboardPage() {
                             responseDueAt={ticket.response_due_at}
                             resolutionDueAt={ticket.resolution_due_at}
                             status={ticket.status}
-                            isBreached={ticket.is_breached}
                              resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
+                             updatedAt={ticket.updated_at}
                             compact
                           />
                         </td>

@@ -109,3 +109,13 @@
   background-size: 200% 100%;
   animation: skeleton-loading 1.5s infinite;
 }
+
+/* Premium plan glow */
+@keyframes plan-glow {
+  0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.1); }
+  50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.3); border-color: rgba(59, 130, 246, 0.5); }
+}
+
+.highlight-pulse {
+  animation: plan-glow 3s infinite ease-in-out;
+}

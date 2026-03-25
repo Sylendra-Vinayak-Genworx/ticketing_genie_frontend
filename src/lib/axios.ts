@@ -1,6 +1,5 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { ENV } from '@/config/env'
-import { TOKEN_KEYS } from '@/config/constants'
 import { store } from '@/app/store'
 import { logout, refreshTokenThunk } from '@/features/auth/slices/authSlice'
 
@@ -23,9 +22,11 @@ export const ticketingApi = axios.create({
 // ─── Request Interceptor (Attach Token) ──────────────────────────────────────
 
 function attachToken(config: InternalAxiosRequestConfig) {
-  const token = localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN)
+  const state = store.getState() as { auth: { access_token: string | null } }
+  const token = state.auth.access_token
   if (token) {
-    config.headers.Authorization = `Bearer ${token}`
+    config.headers = config.headers ?? {}
+    ;(config.headers as any).Authorization = `Bearer ${token}`
   }
   return config
 }
@@ -84,7 +85,8 @@ function addRefreshInterceptor(instance: typeof ticketingApi) {
           return new Promise((resolve, reject) => {
             failedQueue.push({ resolve, reject })
           }).then((token) => {
-            originalRequest.headers.Authorization = `Bearer ${token}`
+            originalRequest.headers = originalRequest.headers ?? {}
+            ;(originalRequest.headers as any).Authorization = `Bearer ${token}`
             return instance(originalRequest)
           })
         }
@@ -97,7 +99,8 @@ function addRefreshInterceptor(instance: typeof ticketingApi) {
           if (refreshTokenThunk.fulfilled.match(result)) {
             const newToken = result.payload.access_token
             processQueue(null, newToken)
-            originalRequest.headers.Authorization = `Bearer ${newToken}`
+            originalRequest.headers = originalRequest.headers ?? {}
+            ;(originalRequest.headers as any).Authorization = `Bearer ${newToken}`
             return instance(originalRequest)
           } else {
             processQueue(error, null)

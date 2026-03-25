@@ -130,7 +130,7 @@ export default function EscalatedTicketsPage() {
                     <td className="px-4 py-3"><StatusBadge   status={ticket.status}     /></td>
                     <td className="px-4 py-3"><PriorityBadge priority={ticket.priority} /></td>
                     <td className="px-4 py-3"><SeverityBadge severity={ticket.severity} /></td>
-                    <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} isBreached={ticket.is_breached}   resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}  resolvedAt={ticket.resolved_at}compact /></td>
+                    <td className="px-4 py-3"><SLATimer dueAt={ticket.resolution_due_at} status={ticket.status} isBreached={ticket.is_breached} resolutionSlaCompletedAt={ticket.resolution_sla_completed_at} resolvedAt={ticket.resolved_at} updatedAt={ticket.updated_at} compact /></td>
                     {canSeeAll && (
                       <td className="px-4 py-3 text-xs text-gray-500">
                         {ticket.assignee_id

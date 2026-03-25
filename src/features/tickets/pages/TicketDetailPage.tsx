@@ -489,6 +489,7 @@ export default function TicketDetailPage() {
                     slaType="response"
                     firstResponseAt={getInProgressAt()}
                     isBreached={t.is_breached}
+                    updatedAt={t.updated_at}
                   />
                 </div>
                 <div>
@@ -501,6 +502,7 @@ export default function TicketDetailPage() {
                     slaType="resolution"
                     resolvedAt={getResolvedAt()}
                     isBreached={t.is_breached}
+                    updatedAt={t.updated_at}
                   />
                 </div>
               </div>

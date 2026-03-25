@@ -65,7 +65,6 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
               💡 Similar Issues Found - Solutions Available
             </h3>
             <p className="text-sm text-blue-800 mb-3">
-              We found <strong>{similarTickets.length}</strong> similar resolved ticket
               {similarTickets.length > 1 ? 's' : ''}. Check if any solution helps before creating a new ticket:
             </p>
 
@@ -80,9 +79,6 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
                     <div className="flex-1 pr-4">
                       <div className="flex items-center gap-2 mb-1 flex-wrap">
                         <CheckCircle className="h-4 w-4 text-green-600 flex-shrink-0" />
-                        <span className="text-xs font-medium text-gray-500">
-                          {ticket.ticket_number}
-                        </span>
                         <span className="text-xs px-2 py-0.5 bg-blue-100 text-blue-800 rounded-full font-semibold">
                           {Math.round(ticket.similarity_score * 100)}% match
                         </span>
@@ -116,9 +112,6 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
             <div className="p-6 border-b border-gray-200 flex items-start justify-between">
               <div className="flex-1 pr-4">
                 <div className="flex items-center gap-2 mb-2 flex-wrap">
-                  <span className="text-xs font-medium text-gray-500">
-                    {selectedTicket.ticket_number}
-                  </span>
                   <span className="text-xs px-2 py-1 bg-green-100 text-green-800 rounded-full font-semibold">
                     {selectedTicket.status}
                   </span>

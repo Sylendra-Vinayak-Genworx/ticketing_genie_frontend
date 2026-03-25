@@ -574,6 +574,7 @@ export default function TicketsListPage() {
                             isBreached={ticket.is_breached}
                             resolvedAt={ticket.resolved_at}
                             resolutionSlaCompletedAt={ticket.resolution_sla_completed_at}
+                            updatedAt={ticket.updated_at}
                             compact
                           />
                         </td>

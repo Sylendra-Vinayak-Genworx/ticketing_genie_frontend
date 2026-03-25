@@ -1,5 +1,5 @@
 import React from 'react'
-import { CheckCircle, Loader2, RefreshCw } from 'lucide-react'
+import { CheckCircle, Loader2, RefreshCw, Star, Sparkles } from 'lucide-react'
 import { PageHeader } from '@/components/common/PageHeader'
 import { useSubscription } from '../hooks/useSubscription'
 
@@ -51,8 +51,12 @@ export default function SubscriptionPage() {
       )}
 
       {!isLoading && !currentTier && (
-        <div className="flex items-center gap-3 px-5 py-4 rounded-xl bg-gray-50 border border-gray-200">
-          <p className="text-sm text-gray-500">You are on the free tier. Choose a plan below to get started.</p>
+        <div className="flex items-center gap-3 px-5 py-4 rounded-xl bg-blue-50 border border-blue-100 text-blue-800 shadow-sm animate-in fade-in slide-in-from-top-2 duration-700">
+          <Sparkles className="w-5 h-5 text-blue-500 flex-shrink-0" />
+          <div className="flex-1">
+            <p className="text-sm font-semibold">Welcome to Ticketing Genie!</p>
+            <p className="text-xs opacity-80">You're currently on the free tier. We've highlighted it for you below.</p>
+          </div>
         </div>
       )}
 
@@ -67,28 +71,39 @@ export default function SubscriptionPage() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {tiers.map((tier, idx) => {
             const p         = getPalette(idx)
-            const isCurrent = tier.tier_id === currentTierId
+            const isFree    = tier.name.toLowerCase().includes('free')
+            const isCurrent = tier.tier_id === currentTierId || (isFree && !currentTierId)
             const isSaving  = saving === tier.tier_id
+            const showNewHighlight = isFree && !currentTierId
 
             return (
               <div
                 key={tier.tier_id}
                 className={`
-                  relative flex flex-col rounded-2xl border-2 p-5 transition-all duration-200
+                  relative flex flex-col rounded-2xl border-2 p-5 transition-all duration-500
                   ${isCurrent
-                    ? `${p.border} ${p.activeBg} ring-2 ${p.ring} ring-offset-2 shadow-md`
-                    : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-lg'
+                    ? `${p.border} ${p.activeBg} ring-2 ${p.ring} ring-offset-2 shadow-md ${showNewHighlight ? 'scale-[1.02] ring-blue-500 highlight-pulse' : ''}`
+                    : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-lg hover:scale-[1.01]'
                   }
                 `}
               >
-                {isCurrent && (
-                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold bg-white border border-gray-200 shadow-sm text-gray-700 whitespace-nowrap">
+                {showNewHighlight && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-1 rounded-full text-[10px] font-bold bg-blue-600 text-white shadow-lg flex items-center gap-1 animate-bounce z-10 whitespace-nowrap uppercase tracking-wider">
+                    <Star className="w-2.5 h-2.5 fill-current" /> Suggested for you
+                  </span>
+                )}
+
+                {isCurrent && !showNewHighlight && (
+                  <span className="absolute -top-3 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full text-xs font-bold bg-white border border-gray-200 shadow-sm text-gray-700 whitespace-nowrap z-10">
                     ✓ Current Plan
                   </span>
                 )}
 
                 <div className="mt-2 mb-4">
-                  <h3 className="text-lg font-bold text-gray-900">{tier.name}</h3>
+                  <div className="flex items-center justify-between gap-2">
+                    <h3 className="text-lg font-bold text-gray-900">{tier.name}</h3>
+                    {isFree && <Sparkles className="w-4 h-4 text-blue-500" />}
+                  </div>
                   {tier.description ? (
                     <p className="text-sm text-gray-500 mt-1 leading-relaxed">{tier.description}</p>
                   ) : (
@@ -114,7 +129,7 @@ export default function SubscriptionPage() {
                   {isSaving ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Applying…</>
                   ) : isCurrent ? (
-                    <><CheckCircle className="w-4 h-4" /> Active</>
+                    <><CheckCircle className="w-4 h-4" /> {showNewHighlight ? 'Active (Free)' : 'Active'}</>
                   ) : (
                     'Choose this plan'
                   )}
