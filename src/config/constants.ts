@@ -12,10 +12,7 @@ export const PAGINATION = {
   PAGE_SIZE_OPTIONS: [10, 20, 50, 100],
 } as const
 
-export const TOKEN_KEYS = {
-  ACCESS_TOKEN: 'access_token',
-  TOKEN_EXPIRY: 'token_expiry',
-} as const
+ 
 
 export const TICKET_STATUSES = [
   'NEW',

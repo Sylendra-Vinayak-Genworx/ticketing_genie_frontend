@@ -1,6 +1,6 @@
 import axios, { AxiosError, InternalAxiosRequestConfig } from 'axios'
 import { ENV } from '@/config/env'
-import { TOKEN_KEYS } from '@/config/constants'
+ 
 import { store } from '@/app/store'
 import { logout, refreshTokenThunk } from '@/features/auth/slices/authSlice'
 
@@ -23,7 +23,7 @@ export const ticketingApi = axios.create({
 // ─── Request Interceptor (Attach Token) ──────────────────────────────────────
 
 function attachToken(config: InternalAxiosRequestConfig) {
-  const token = localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN)
+  const token = store.getState().auth.access_token
   if (token) {
     config.headers.Authorization = `Bearer ${token}`
   }

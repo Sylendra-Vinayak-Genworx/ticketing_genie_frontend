@@ -1,6 +1,6 @@
 import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
 import { authService } from '../services/authService'
-import { TOKEN_KEYS } from '@/config/constants'
+ 
 import type { AuthState, LoginRequest, SignupRequest, User } from '@/types'
 
 // ─── Thunks ───────────────────────────────────────────────────────────────────
@@ -10,9 +10,6 @@ export const loginThunk = createAsyncThunk(
   async (credentials: LoginRequest, { rejectWithValue }) => {
     try {
       const tokens = await authService.login(credentials)
-      localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, tokens.access_token)
-      const expiry = Date.now() + tokens.expires_in * 1000
-      localStorage.setItem(TOKEN_KEYS.TOKEN_EXPIRY, String(expiry))
       const user = await authService.getMe()
       return { tokens, user }
     } catch (err: any) {
@@ -37,9 +34,6 @@ export const refreshTokenThunk = createAsyncThunk(
   async (_, { rejectWithValue }) => {
     try {
       const tokens = await authService.refresh()
-      localStorage.setItem(TOKEN_KEYS.ACCESS_TOKEN, tokens.access_token)
-      const expiry = Date.now() + tokens.expires_in * 1000
-      localStorage.setItem(TOKEN_KEYS.TOKEN_EXPIRY, String(expiry))
       return tokens
     } catch (err: any) {
       return rejectWithValue(err.response?.data?.detail || 'Token refresh failed')
@@ -75,23 +69,11 @@ export const getMeThunk = createAsyncThunk(
 
 // ─── Initial State ────────────────────────────────────────────────────────────
 
-const storedToken  = localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN)
-const storedExpiry = localStorage.getItem(TOKEN_KEYS.TOKEN_EXPIRY)
-
-// A stored token that hasn't expired yet can be used immediately.
-const isTokenValid = !!storedToken && !!storedExpiry && Date.now() < Number(storedExpiry)
-
-// If a token was stored but has expired, we can still attempt a silent refresh
-// using the HTTP-only refresh_token cookie (managed by the server).
-// Don't clear localStorage yet — the refresh attempt in AuthInitializer will
-// either succeed (updating the token) or fail (triggering a full logout).
-const canAttemptRefresh = !!storedToken && !isTokenValid
-
 const initialState: AuthState = {
   user: null,
-  access_token: isTokenValid ? storedToken : null,
-  isAuthenticated: isTokenValid,
-  isLoading: canAttemptRefresh,   // show loading spinner while refreshing
+  access_token: null,
+  isAuthenticated: false,
+  isLoading: true, // Show loading spinner while AuthInitializer attempts silent refresh
   error: null,
 }
 
@@ -105,9 +87,8 @@ const authSlice = createSlice({
       state.user = null
       state.access_token = null
       state.isAuthenticated = false
+      state.isLoading = false
       state.error = null
-      localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN)
-      localStorage.removeItem(TOKEN_KEYS.TOKEN_EXPIRY)
     },
     clearError(state) {
       state.error = null
@@ -147,8 +128,6 @@ const authSlice = createSlice({
         state.access_token = null
         state.isAuthenticated = false
         state.isLoading = false
-        localStorage.removeItem(TOKEN_KEYS.ACCESS_TOKEN)
-        localStorage.removeItem(TOKEN_KEYS.TOKEN_EXPIRY)
       })
 
     // GetMe

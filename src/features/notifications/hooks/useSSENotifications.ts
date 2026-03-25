@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react'
-import { TOKEN_KEYS } from '@/config/constants'
+ 
 import { ENV } from '@/config/env'
 import { useAppDispatch, useAppSelector } from '@/hooks'
 import { pushNotification, setConnected } from '../slices/notificationsSlice'
@@ -30,8 +30,8 @@ export function useSSENotifications() {
     if (!isAuth) return
 
     function connect() {
-      // Always read the freshest token from storage at connection time
-      const token = localStorage.getItem(TOKEN_KEYS.ACCESS_TOKEN)
+      // Always read the freshest token from Redux at connection time
+      const token = store.getState().auth.access_token
       if (!token) return
 
       const url = `${SSE_URL}?token=${encodeURIComponent(token)}`
