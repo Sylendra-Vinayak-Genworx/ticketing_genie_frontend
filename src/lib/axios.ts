@@ -24,6 +24,10 @@ export const ticketingApi = axios.create({
 function attachToken(config: InternalAxiosRequestConfig) {
   const state = store.getState() as { auth: { access_token: string | null } }
   const token = state.auth.access_token
+
+  // Ensure cookies are sent with every request (refresh flow via HttpOnly cookies).
+  config.withCredentials = true
+
   if (token) {
     config.headers = config.headers ?? {}
     ;(config.headers as any).Authorization = `Bearer ${token}`
@@ -87,6 +91,7 @@ function addRefreshInterceptor(instance: typeof ticketingApi) {
           }).then((token) => {
             originalRequest.headers = originalRequest.headers ?? {}
             ;(originalRequest.headers as any).Authorization = `Bearer ${token}`
+            originalRequest.withCredentials = true
             return instance(originalRequest)
           })
         }
@@ -101,6 +106,7 @@ function addRefreshInterceptor(instance: typeof ticketingApi) {
             processQueue(null, newToken)
             originalRequest.headers = originalRequest.headers ?? {}
             ;(originalRequest.headers as any).Authorization = `Bearer ${newToken}`
+            originalRequest.withCredentials = true
             return instance(originalRequest)
           } else {
             processQueue(error, null)
