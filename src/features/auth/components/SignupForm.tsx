@@ -1,42 +1,42 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Loader2, Zap } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
-import toast from 'react-hot-toast'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Zap } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import toast from 'react-hot-toast';
 
 export default function SignupForm() {
-  const navigate = useNavigate()
-  const { signup, isLoading } = useAuth()
+  const navigate = useNavigate();
+  const { signup, isLoading } = useAuth();
 
   const [form, setForm] = useState({
     email: '',
     full_name: '',
     password: '',
     confirmPassword: '',
-  })
-  const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({})
+  });
+  const [errors, setErrors] = useState<Partial<Record<keyof typeof form, string>>>({});
 
   function validate() {
-    const e: Partial<Record<keyof typeof form, string>> = {}
-    if (!form.email.trim()) e.email = 'Required'
-    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email'
-    if (!form.full_name.trim()) e.full_name = 'Required'
-    if (!form.password) e.password = 'Required'
-    else if (form.password.length < 8) e.password = 'Min 8 chars'
-    if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match'
-    setErrors(e)
-    return Object.keys(e).length === 0
+    const e: Partial<Record<keyof typeof form, string>> = {};
+    if (!form.email.trim()) e.email = 'Required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) e.email = 'Invalid email';
+    if (!form.full_name.trim()) e.full_name = 'Required';
+    if (!form.password) e.password = 'Required';
+    else if (form.password.length < 8) e.password = 'Min 8 chars';
+    if (form.password !== form.confirmPassword) e.confirmPassword = 'Passwords do not match';
+    setErrors(e);
+    return Object.keys(e).length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!validate()) return
-    const result = await signup({ email: form.email, password: form.password, role: 'user' })
+    e.preventDefault();
+    if (!validate()) return;
+    const result = await signup({ email: form.email, password: form.password, role: 'user' });
     if ((result as any).payload?.user) {
-      toast.success('Account created! Please sign in.')
-      navigate('/login')
+      toast.success('Account created! Please sign in.');
+      navigate('/login');
     } else {
-      toast.error((result as any).payload || 'Signup failed')
+      toast.error((result as any).payload || 'Signup failed');
     }
   }
 
@@ -90,7 +90,9 @@ export default function SignupForm() {
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">Confirm Password</label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">
+                Confirm Password
+              </label>
               <input
                 type="password"
                 value={form.confirmPassword}
@@ -98,22 +100,37 @@ export default function SignupForm() {
                 className={`input-field ${errors.confirmPassword ? 'input-error' : ''}`}
                 placeholder="Repeat password"
               />
-              {errors.confirmPassword && <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>}
+              {errors.confirmPassword && (
+                <p className="mt-1 text-xs text-red-600">{errors.confirmPassword}</p>
+              )}
             </div>
 
-            <button type="submit" disabled={isLoading} className="btn-primary w-full justify-center py-2.5">
-              {isLoading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creating…</> : 'Create Account'}
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn-primary w-full justify-center py-2.5"
+            >
+              {isLoading ? (
+                <>
+                  <Loader2 className="w-4 h-4 animate-spin" /> Creating…
+                </>
+              ) : (
+                'Create Account'
+              )}
             </button>
           </form>
         </div>
 
         <p className="text-center text-xs text-slate-500 mt-6">
           Already have an account?{' '}
-          <button onClick={() => navigate('/login')} className="text-blue-400 hover:text-blue-300 font-medium">
+          <button
+            onClick={() => navigate('/login')}
+            className="text-blue-400 hover:text-blue-300 font-medium"
+          >
             Sign in
           </button>
         </p>
       </div>
     </div>
-  )
+  );
 }

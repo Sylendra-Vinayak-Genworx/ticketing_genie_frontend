@@ -50,12 +50,12 @@ src/
 
 ## 🎭 Role-Based Access
 
-| Role          | Dashboard | Tickets      | Analytics | SLA | Keywords | Users |
-|---------------|-----------|--------------|-----------|-----|----------|-------|
-| user          | ✅        | Own only     | ❌        | ❌  | ❌       | ❌    |
-| support_agent | ✅        | Assigned     | ❌        | ❌  | ❌       | ❌    |
-| team_lead     | ✅        | All          | ✅        | ✅  | ✅       | ❌    |
-| admin         | ✅        | All          | ✅        | ✅  | ✅       | ✅    |
+| Role          | Dashboard | Tickets  | Analytics | SLA | Keywords | Users |
+| ------------- | --------- | -------- | --------- | --- | -------- | ----- |
+| user          | ✅        | Own only | ❌        | ❌  | ❌       | ❌    |
+| support_agent | ✅        | Assigned | ❌        | ❌  | ❌       | ❌    |
+| team_lead     | ✅        | All      | ✅        | ✅  | ✅       | ❌    |
+| admin         | ✅        | All      | ✅        | ✅  | ✅       | ✅    |
 
 ## 🔐 Authentication
 
@@ -67,7 +67,7 @@ src/
 ## 🛠️ Tech Stack
 
 - **React 18** + TypeScript
-- **Vite** — fast dev server & bundler  
+- **Vite** — fast dev server & bundler
 - **Tailwind CSS 3** — utility-first styling
 - **Redux Toolkit** — state management
 - **React Router v6** — client-side routing

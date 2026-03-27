@@ -1,6 +1,6 @@
 /**
  * Similar Tickets Panel Component
- * 
+ *
  * Shows similar resolved tickets with solutions when creating a new ticket.
  */
 import React, { useState } from 'react';
@@ -17,7 +17,7 @@ interface SimilarTicketsPanelProps {
 export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
   similarTickets,
   isLoading,
-  onSolutionFound
+  onSolutionFound,
 }) => {
   const [showModal, setShowModal] = useState(false);
   const [selectedTicket, setSelectedTicket] = useState<SimilarTicket | null>(null);
@@ -42,9 +42,7 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
       <div className="bg-blue-50 border border-blue-200 rounded-lg p-4 mb-4">
         <div className="flex items-center gap-2 text-blue-700">
           <Loader2 className="h-5 w-5 animate-spin" />
-          <span className="text-sm font-medium">
-            Searching for similar issues...
-          </span>
+          <span className="text-sm font-medium">Searching for similar issues...</span>
         </div>
       </div>
     );
@@ -65,7 +63,7 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
               💡 Similar Issues Found - Solutions Available
             </h3>
             <p className="text-sm text-blue-800 mb-3">
-              {similarTickets.length > 1 ? 's' : ''}. Check if any solution helps before creating a new ticket:
+              Check if any solution helps before creating a new ticket:
             </p>
 
             <div className="space-y-2">
@@ -86,9 +84,7 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
                           {ticket.product}
                         </span>
                       </div>
-                      <div className="font-medium text-gray-900 text-sm mb-1">
-                        {ticket.title}
-                      </div>
+                      <div className="font-medium text-gray-900 text-sm mb-1">{ticket.title}</div>
                       {ticket.solution_text && (
                         <div className="text-xs text-green-700 font-medium">
                           ✓ AI-generated solution available
@@ -119,9 +115,7 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
                     {Math.round(selectedTicket.similarity_score * 100)}% similar
                   </span>
                 </div>
-                <h2 className="text-xl font-bold text-gray-900">
-                  {selectedTicket.title}
-                </h2>
+                <h2 className="text-xl font-bold text-gray-900">{selectedTicket.title}</h2>
                 <div className="flex items-center gap-3 mt-2 text-sm text-gray-600">
                   <span className="flex items-center gap-1">
                     <span className="font-medium">Priority:</span> {selectedTicket.priority}
@@ -134,7 +128,9 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
                     <>
                       <span>•</span>
                       <span>
-                        {formatDistanceToNow(new Date(selectedTicket.created_at), { addSuffix: true })}
+                        {formatDistanceToNow(new Date(selectedTicket.created_at), {
+                          addSuffix: true,
+                        })}
                       </span>
                     </>
                   )}
@@ -151,9 +147,7 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
             {/* Content */}
             <div className="flex-1 overflow-y-auto p-6">
               <div className="mb-6">
-                <h3 className="text-sm font-semibold text-gray-700 mb-2">
-                  Original Issue:
-                </h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-2">Original Issue:</h3>
                 <p className="text-sm text-gray-800 whitespace-pre-wrap bg-gray-50 p-3 rounded border border-gray-200">
                   {selectedTicket.description}
                 </p>
@@ -171,7 +165,8 @@ export const SimilarTicketsPanel: React.FC<SimilarTicketsPanelProps> = ({
                     </p>
                     <div className="mt-3 pt-3 border-t border-green-200">
                       <p className="text-xs text-gray-600 italic">
-                        💡 This solution was AI-generated and summarized from resolved ticket comments. Sensitive data has been automatically masked for privacy.
+                        💡 This solution was AI-generated and summarized from resolved ticket
+                        comments. Sensitive data has been automatically masked for privacy.
                       </p>
                     </div>
                   </div>

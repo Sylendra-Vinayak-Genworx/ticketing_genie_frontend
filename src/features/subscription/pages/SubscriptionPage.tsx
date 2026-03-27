@@ -1,26 +1,56 @@
-import React from 'react'
-import { CheckCircle, Loader2, RefreshCw, Star, Sparkles } from 'lucide-react'
-import { PageHeader } from '@/components/common/PageHeader'
-import { useSubscription } from '../hooks/useSubscription'
+import React from 'react';
+import { CheckCircle, Loader2, RefreshCw, Star, Sparkles } from 'lucide-react';
+import { PageHeader } from '@/components/common/PageHeader';
+import { useSubscription } from '../hooks/useSubscription';
 
 // Colour palette per position — index 0,1,2,3 maps to tiers in DB order
 const PALETTE = [
-  { ring: 'ring-gray-400',   activeBg: 'bg-gray-50',   border: 'border-gray-200',   checkColor: 'text-gray-500',   btn: 'bg-gray-700 hover:bg-gray-800'   },
-  { ring: 'ring-blue-400',   activeBg: 'bg-blue-50',   border: 'border-blue-200',   checkColor: 'text-blue-600',   btn: 'bg-blue-600 hover:bg-blue-700'   },
-  { ring: 'ring-violet-400', activeBg: 'bg-violet-50', border: 'border-violet-200', checkColor: 'text-violet-600', btn: 'bg-violet-600 hover:bg-violet-700' },
-  { ring: 'ring-amber-400',  activeBg: 'bg-amber-50',  border: 'border-amber-200',  checkColor: 'text-amber-600',  btn: 'bg-amber-500 hover:bg-amber-600'  },
-]
+  {
+    ring: 'ring-gray-400',
+    activeBg: 'bg-gray-50',
+    border: 'border-gray-200',
+    checkColor: 'text-gray-500',
+    btn: 'bg-gray-700 hover:bg-gray-800',
+  },
+  {
+    ring: 'ring-blue-400',
+    activeBg: 'bg-blue-50',
+    border: 'border-blue-200',
+    checkColor: 'text-blue-600',
+    btn: 'bg-blue-600 hover:bg-blue-700',
+  },
+  {
+    ring: 'ring-violet-400',
+    activeBg: 'bg-violet-50',
+    border: 'border-violet-200',
+    checkColor: 'text-violet-600',
+    btn: 'bg-violet-600 hover:bg-violet-700',
+  },
+  {
+    ring: 'ring-amber-400',
+    activeBg: 'bg-amber-50',
+    border: 'border-amber-200',
+    checkColor: 'text-amber-600',
+    btn: 'bg-amber-500 hover:bg-amber-600',
+  },
+];
 
 function getPalette(index: number) {
-  return PALETTE[index % PALETTE.length]
+  return PALETTE[index % PALETTE.length];
 }
 
 export default function SubscriptionPage() {
   const {
-    tiers, isLoading, saving, confirm, setConfirm,
-    currentTierId, currentTier,
-    loadTiers, applyTier,
-  } = useSubscription()
+    tiers,
+    isLoading,
+    saving,
+    confirm,
+    setConfirm,
+    currentTierId,
+    currentTier,
+    loadTiers,
+    applyTier,
+  } = useSubscription();
 
   return (
     <div className="max-w-4xl space-y-6">
@@ -38,7 +68,9 @@ export default function SubscriptionPage() {
       {!isLoading && currentTier && (
         <div className="flex items-center gap-4 px-5 py-4 rounded-xl bg-gradient-to-r from-violet-50 to-blue-50 border border-violet-100">
           <div className="flex-1">
-            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">Your current plan</p>
+            <p className="text-xs font-semibold text-gray-400 uppercase tracking-wider">
+              Your current plan
+            </p>
             <p className="text-2xl font-bold text-gray-900 mt-0.5">{currentTier.name}</p>
             {currentTier.description && (
               <p className="text-sm text-gray-500 mt-0.5">{currentTier.description}</p>
@@ -55,7 +87,9 @@ export default function SubscriptionPage() {
           <Sparkles className="w-5 h-5 text-blue-500 flex-shrink-0" />
           <div className="flex-1">
             <p className="text-sm font-semibold">Welcome to Ticketing Genie!</p>
-            <p className="text-xs opacity-80">You're currently on the free tier. We've highlighted it for you below.</p>
+            <p className="text-xs opacity-80">
+              You're currently on the free tier. We've highlighted it for you below.
+            </p>
           </div>
         </div>
       )}
@@ -70,20 +104,21 @@ export default function SubscriptionPage() {
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           {tiers.map((tier, idx) => {
-            const p         = getPalette(idx)
-            const isFree    = tier.name.toLowerCase().includes('free')
-            const isCurrent = tier.tier_id === currentTierId || (isFree && !currentTierId)
-            const isSaving  = saving === tier.tier_id
-            const showNewHighlight = isFree && !currentTierId
+            const p = getPalette(idx);
+            const isFree = tier.name.toLowerCase().includes('free');
+            const isCurrent = tier.tier_id === currentTierId || (isFree && !currentTierId);
+            const isSaving = saving === tier.tier_id;
+            const showNewHighlight = isFree && !currentTierId;
 
             return (
               <div
                 key={tier.tier_id}
                 className={`
                   relative flex flex-col rounded-2xl border-2 p-5 transition-all duration-500
-                  ${isCurrent
-                    ? `${p.border} ${p.activeBg} ring-2 ${p.ring} ring-offset-2 shadow-md ${showNewHighlight ? 'scale-[1.02] ring-blue-500 highlight-pulse' : ''}`
-                    : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-lg hover:scale-[1.01]'
+                  ${
+                    isCurrent
+                      ? `${p.border} ${p.activeBg} ring-2 ${p.ring} ring-offset-2 shadow-md ${showNewHighlight ? 'scale-[1.02] ring-blue-500 highlight-pulse' : ''}`
+                      : 'border-gray-100 bg-white hover:border-gray-200 hover:shadow-lg hover:scale-[1.01]'
                   }
                 `}
               >
@@ -115,27 +150,33 @@ export default function SubscriptionPage() {
                 <div className="flex-1" />
 
                 <button
-                  onClick={() => isCurrent ? null : setConfirm(tier)}
+                  onClick={() => (isCurrent ? null : setConfirm(tier))}
                   disabled={isCurrent || isSaving}
                   className={`
                     mt-4 w-full py-2.5 rounded-xl text-sm font-semibold
                     flex items-center justify-center gap-2 transition-all
-                    ${isCurrent
-                      ? 'bg-gray-100 text-gray-400 cursor-default'
-                      : `${p.btn} text-white active:scale-95`
+                    ${
+                      isCurrent
+                        ? 'bg-gray-100 text-gray-400 cursor-default'
+                        : `${p.btn} text-white active:scale-95`
                     }
                   `}
                 >
                   {isSaving ? (
-                    <><Loader2 className="w-4 h-4 animate-spin" /> Applying…</>
+                    <>
+                      <Loader2 className="w-4 h-4 animate-spin" /> Applying…
+                    </>
                   ) : isCurrent ? (
-                    <><CheckCircle className="w-4 h-4" /> {showNewHighlight ? 'Active (Free)' : 'Active'}</>
+                    <>
+                      <CheckCircle className="w-4 h-4" />{' '}
+                      {showNewHighlight ? 'Active (Free)' : 'Active'}
+                    </>
                   ) : (
                     'Choose this plan'
                   )}
                 </button>
               </div>
-            )
+            );
           })}
         </div>
       )}
@@ -150,11 +191,17 @@ export default function SubscriptionPage() {
           <div className="bg-white rounded-2xl shadow-2xl p-6 w-full max-w-sm space-y-4">
             <h3 className="text-lg font-bold text-gray-900">Switch to {confirm.name}?</h3>
             <p className="text-sm text-gray-600">
-              {currentTier
-                ? <>You are switching from <strong>{currentTier.name}</strong> to <strong>{confirm.name}</strong>.</>
-                : <>You are subscribing to <strong>{confirm.name}</strong>.</>
-              }
-              {' '}This takes effect immediately for new tickets.
+              {currentTier ? (
+                <>
+                  You are switching from <strong>{currentTier.name}</strong> to{' '}
+                  <strong>{confirm.name}</strong>.
+                </>
+              ) : (
+                <>
+                  You are subscribing to <strong>{confirm.name}</strong>.
+                </>
+              )}{' '}
+              This takes effect immediately for new tickets.
             </p>
             {confirm.description && (
               <div className="bg-gray-50 rounded-xl px-4 py-3 text-sm text-gray-600">
@@ -173,5 +220,5 @@ export default function SubscriptionPage() {
         </div>
       )}
     </div>
-  )
+  );
 }

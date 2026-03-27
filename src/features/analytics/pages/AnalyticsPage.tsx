@@ -1,51 +1,83 @@
-import React from 'react'
+import React from 'react';
 import {
-  BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer,
-  PieChart, Pie, Cell, Legend,
-} from 'recharts'
-import { useAnalytics } from '@/features/analytics/hooks/useAnalytics'
-import { useAnalyticsChartData } from '@/features/analytics/hooks/useAnalyticsChartData'
-import { PageHeader } from '@/components/common/PageHeader'
-import { LoadingSpinner } from '@/components/common/LoadingSpinner'
-import { formatPercent } from '@/utils'
+  BarChart,
+  Bar,
+  XAxis,
+  YAxis,
+  CartesianGrid,
+  Tooltip,
+  ResponsiveContainer,
+  PieChart,
+  Pie,
+  Cell,
+  Legend,
+} from 'recharts';
+import { useAnalytics } from '@/features/analytics/hooks/useAnalytics';
+import { useAnalyticsChartData } from '@/features/analytics/hooks/useAnalyticsChartData';
+import { PageHeader } from '@/components/common/PageHeader';
+import { LoadingSpinner } from '@/components/common/LoadingSpinner';
+import { formatPercent } from '@/utils';
 
-const COLORS = ['#3b82f6', '#8b5cf6', '#f59e0b', '#10b981', '#ef4444', '#6366f1', '#ec4899', '#14b8a6']
+const COLORS = [
+  '#3b82f6',
+  '#8b5cf6',
+  '#f59e0b',
+  '#10b981',
+  '#ef4444',
+  '#6366f1',
+  '#ec4899',
+  '#14b8a6',
+];
 
-function MetricCard({ label, value, sub, color = 'text-gray-900' }: { label: string; value: string | number; sub?: string; color?: string }) {
+function MetricCard({
+  label,
+  value,
+  sub,
+  color = 'text-gray-900',
+}: {
+  label: string;
+  value: string | number;
+  sub?: string;
+  color?: string;
+}) {
   return (
     <div className="card p-5">
       <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">{label}</p>
       <p className={`text-2xl font-bold ${color}`}>{value}</p>
       {sub && <p className="text-xs text-gray-400 mt-1">{sub}</p>}
     </div>
-  )
+  );
 }
 
 export default function AnalyticsPage() {
-  const { data, isLoading, isError, error } = useAnalytics()
+  const { data, isLoading, isError, error } = useAnalytics();
+  const { statusData, severityData, priorityData } = useAnalyticsChartData(data?.distribution);
 
-  if (isLoading) return <LoadingSpinner fullPage text="Loading analytics…" />
-  if (isError || !data) return (
-    <div className="text-center py-16 text-gray-500">{error || 'No data available'}</div>
-  )
+  if (isLoading) return <LoadingSpinner fullPage text="Loading analytics…" />;
 
-  const { summary, distribution, sla_compliance } = data
+  if (isError || !data) {
+    return <div className="text-center py-16 text-gray-500">{error || 'No data available'}</div>;
+  }
 
-  const { statusData, severityData, priorityData } = useAnalyticsChartData(distribution)
+  const { summary, sla_compliance } = data;
 
   return (
     <div className="space-y-6">
       <PageHeader title="Analytics Dashboard" subtitle="Overview of your support operations" />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-        <MetricCard label="Total Tickets"  value={summary.total_tickets}      color="text-blue-600" />
-        <MetricCard label="Open"           value={summary.open_tickets}        color="text-yellow-600" />
-        <MetricCard label="Resolved"       value={summary.resolved_tickets}    color="text-green-600" />
-        <MetricCard label="SLA Breached"   value={summary.breached_tickets}    color="text-red-600" />
-        <MetricCard label="In Progress"    value={summary.in_progress_tickets} color="text-indigo-600" />
-        <MetricCard label="On Hold"        value={summary.on_hold_tickets}     color="text-gray-600" />
-        <MetricCard label="Escalated"      value={summary.escalated_tickets}   color="text-orange-600" />
-        <MetricCard label="Closed"         value={summary.closed_tickets} />
+        <MetricCard label="Total Tickets" value={summary.total_tickets} color="text-blue-600" />
+        <MetricCard label="Open" value={summary.open_tickets} color="text-yellow-600" />
+        <MetricCard label="Resolved" value={summary.resolved_tickets} color="text-green-600" />
+        <MetricCard label="SLA Breached" value={summary.breached_tickets} color="text-red-600" />
+        <MetricCard
+          label="In Progress"
+          value={summary.in_progress_tickets}
+          color="text-indigo-600"
+        />
+        <MetricCard label="On Hold" value={summary.on_hold_tickets} color="text-gray-600" />
+        <MetricCard label="Escalated" value={summary.escalated_tickets} color="text-orange-600" />
+        <MetricCard label="Closed" value={summary.closed_tickets} />
       </div>
 
       <div className="card p-5">
@@ -55,18 +87,28 @@ export default function AnalyticsPage() {
             <p className="text-xs text-gray-500 mb-1">Response SLA Compliance</p>
             <div className="flex items-center gap-3">
               <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-green-500 rounded-full transition-all" style={{ width: `${sla_compliance.response_compliance_pct}%` }} />
+                <div
+                  className="h-full bg-green-500 rounded-full transition-all"
+                  style={{ width: `${sla_compliance.response_compliance_pct}%` }}
+                />
               </div>
-              <span className="text-sm font-bold text-green-600">{formatPercent(sla_compliance.response_compliance_pct)}</span>
+              <span className="text-sm font-bold text-green-600">
+                {formatPercent(sla_compliance.response_compliance_pct)}
+              </span>
             </div>
           </div>
           <div>
             <p className="text-xs text-gray-500 mb-1">Resolution SLA Compliance</p>
             <div className="flex items-center gap-3">
               <div className="flex-1 h-2.5 bg-gray-100 rounded-full overflow-hidden">
-                <div className="h-full bg-blue-500 rounded-full transition-all" style={{ width: `${sla_compliance.resolution_compliance_pct}%` }} />
+                <div
+                  className="h-full bg-blue-500 rounded-full transition-all"
+                  style={{ width: `${sla_compliance.resolution_compliance_pct}%` }}
+                />
               </div>
-              <span className="text-sm font-bold text-blue-600">{formatPercent(sla_compliance.resolution_compliance_pct)}</span>
+              <span className="text-sm font-bold text-blue-600">
+                {formatPercent(sla_compliance.resolution_compliance_pct)}
+              </span>
             </div>
           </div>
           <div className="flex gap-4 text-sm">
@@ -100,8 +142,19 @@ export default function AnalyticsPage() {
           <h3 className="font-semibold text-gray-900 mb-4">Tickets by Severity</h3>
           <ResponsiveContainer width="100%" height={220}>
             <PieChart>
-              <Pie data={severityData} dataKey="value" nameKey="name" cx="50%" cy="50%" outerRadius={80} label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`} labelLine={false}>
-                {severityData.map((_: any, i: number) => <Cell key={i} fill={COLORS[i % COLORS.length]} />)}
+              <Pie
+                data={severityData}
+                dataKey="value"
+                nameKey="name"
+                cx="50%"
+                cy="50%"
+                outerRadius={80}
+                label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                labelLine={false}
+              >
+                {severityData.map((_: any, i: number) => (
+                  <Cell key={i} fill={COLORS[i % COLORS.length]} />
+                ))}
               </Pie>
               <Legend iconType="circle" iconSize={8} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
@@ -112,18 +165,24 @@ export default function AnalyticsPage() {
         <div className="card p-5">
           <h3 className="font-semibold text-gray-900 mb-4">Tickets by Priority</h3>
           <ResponsiveContainer width="100%" height={180}>
-            <BarChart data={priorityData} layout="vertical" margin={{ top: 0, right: 0, left: 10, bottom: 0 }}>
+            <BarChart
+              data={priorityData}
+              layout="vertical"
+              margin={{ top: 0, right: 0, left: 10, bottom: 0 }}
+            >
               <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" horizontal={false} />
               <XAxis type="number" tick={{ fontSize: 11 }} />
               <YAxis type="category" dataKey="name" tick={{ fontSize: 12 }} />
               <Tooltip contentStyle={{ fontSize: 12, borderRadius: 8 }} />
               <Bar dataKey="value" radius={[0, 4, 4, 0]}>
-                {priorityData.map((_: any, i: number) => <Cell key={i} fill={['#ef4444','#f97316','#3b82f6','#94a3b8'][i]} />)}
+                {priorityData.map((_: any, i: number) => (
+                  <Cell key={i} fill={['#ef4444', '#f97316', '#3b82f6', '#94a3b8'][i]} />
+                ))}
               </Bar>
             </BarChart>
           </ResponsiveContainer>
         </div>
       </div>
     </div>
-  )
+  );
 }

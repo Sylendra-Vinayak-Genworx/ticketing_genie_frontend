@@ -1,42 +1,42 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Loader2, Zap, ArrowLeft, Mail } from 'lucide-react'
-import { authService } from '../services/authService'
-import toast from 'react-hot-toast'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Loader2, Zap, ArrowLeft, Mail } from 'lucide-react';
+import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 
 export default function ForgotPasswordForm() {
-  const navigate = useNavigate()
-  const [email, setEmail] = useState('')
-  const [isLoading, setIsLoading] = useState(false)
-  const [submitted, setSubmitted] = useState(false)
-  const [error, setError] = useState('')
+  const navigate = useNavigate();
+  const [email, setEmail] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [submitted, setSubmitted] = useState(false);
+  const [error, setError] = useState('');
 
   function validate() {
     if (!email.trim()) {
-      setError('Email is required')
-      return false
+      setError('Email is required');
+      return false;
     }
     if (!/\S+@\S+\.\S+/.test(email)) {
-      setError('Enter a valid email')
-      return false
+      setError('Enter a valid email');
+      return false;
     }
-    setError('')
-    return true
+    setError('');
+    return true;
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!validate()) return
+    e.preventDefault();
+    if (!validate()) return;
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await authService.forgotPassword(email)
-      setSubmitted(true)
-      toast.success('Reset link sent!')
+      await authService.forgotPassword(email);
+      setSubmitted(true);
+      toast.success('Reset link sent!');
     } catch {
-      toast.error('Something went wrong. Please try again.')
+      toast.error('Something went wrong. Please try again.');
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -63,7 +63,8 @@ export default function ForgotPasswordForm() {
               </div>
               <h2 className="text-lg font-semibold text-gray-900 mb-2">Check your email</h2>
               <p className="text-sm text-gray-500 mb-6">
-                If an account exists for <strong>{email}</strong>, you'll receive a password reset link shortly.
+                If an account exists for <strong>{email}</strong>, you'll receive a password reset
+                link shortly.
               </p>
               <button
                 onClick={() => navigate('/login')}
@@ -83,8 +84,8 @@ export default function ForgotPasswordForm() {
                   autoComplete="email"
                   value={email}
                   onChange={(e) => {
-                    setEmail(e.target.value)
-                    setError('')
+                    setEmail(e.target.value);
+                    setError('');
                   }}
                   placeholder="you@company.com"
                   className={`input-field ${error ? 'input-error' : ''}`}
@@ -119,5 +120,5 @@ export default function ForgotPasswordForm() {
         </p>
       </div>
     </div>
-  )
+  );
 }

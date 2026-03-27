@@ -1,14 +1,23 @@
-import React, { useRef, useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useRef, useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  Bell, CheckCheck, Trash2, Ticket, AlertTriangle,
-  Clock, MessageSquare, UserCheck, X, Wifi, WifiOff,
-} from 'lucide-react'
-import { cn } from '@/utils'
-import { useAppDispatch, useAppSelector } from '@/hooks'
-import { markAllRead, markRead, clearAll } from '../slices/notificationsSlice'
-import type { NotificationItem, NotificationEventType } from '../types'
-import { formatDistanceToNow, parseISO } from 'date-fns'
+  Bell,
+  CheckCheck,
+  Trash2,
+  Ticket,
+  AlertTriangle,
+  Clock,
+  MessageSquare,
+  UserCheck,
+  X,
+  Wifi,
+  WifiOff,
+} from 'lucide-react';
+import { cn } from '@/utils';
+import { useAppDispatch, useAppSelector } from '@/hooks';
+import { markAllRead, markRead, clearAll } from '../slices/notificationsSlice';
+import type { NotificationItem, NotificationEventType } from '../types';
+import { formatDistanceToNow, parseISO } from 'date-fns';
 
 // ── Icon + colour per event type ─────────────────────────────────────────────
 
@@ -16,14 +25,39 @@ const EVENT_META: Record<
   NotificationEventType,
   { icon: React.ElementType; bg: string; text: string; label: string }
 > = {
-  TICKET_CREATED:   { icon: Ticket,       bg: 'bg-blue-100',   text: 'text-blue-600',   label: 'New Ticket' },
-  STATUS_CHANGED:   { icon: Clock,        bg: 'bg-yellow-100', text: 'text-yellow-600', label: 'Status Update' },
-  AGENT_COMMENT:    { icon: MessageSquare,bg: 'bg-indigo-100', text: 'text-indigo-600', label: 'Agent Reply' },
-  CUSTOMER_COMMENT: { icon: MessageSquare,bg: 'bg-sky-100',    text: 'text-sky-600',    label: 'Customer Reply' },
-  TICKET_ASSIGNED:  { icon: UserCheck,    bg: 'bg-green-100',  text: 'text-green-600',  label: 'Assigned' },
-  SLA_BREACHED:     { icon: AlertTriangle,bg: 'bg-red-100',    text: 'text-red-600',    label: 'SLA Breach' },
-  AUTO_CLOSED:      { icon: X,            bg: 'bg-gray-100',   text: 'text-gray-500',   label: 'Auto Closed' },
-}
+  TICKET_CREATED: { icon: Ticket, bg: 'bg-blue-100', text: 'text-blue-600', label: 'New Ticket' },
+  STATUS_CHANGED: {
+    icon: Clock,
+    bg: 'bg-yellow-100',
+    text: 'text-yellow-600',
+    label: 'Status Update',
+  },
+  AGENT_COMMENT: {
+    icon: MessageSquare,
+    bg: 'bg-indigo-100',
+    text: 'text-indigo-600',
+    label: 'Agent Reply',
+  },
+  CUSTOMER_COMMENT: {
+    icon: MessageSquare,
+    bg: 'bg-sky-100',
+    text: 'text-sky-600',
+    label: 'Customer Reply',
+  },
+  TICKET_ASSIGNED: {
+    icon: UserCheck,
+    bg: 'bg-green-100',
+    text: 'text-green-600',
+    label: 'Assigned',
+  },
+  SLA_BREACHED: {
+    icon: AlertTriangle,
+    bg: 'bg-red-100',
+    text: 'text-red-600',
+    label: 'SLA Breach',
+  },
+  AUTO_CLOSED: { icon: X, bg: 'bg-gray-100', text: 'text-gray-500', label: 'Auto Closed' },
+};
 
 // ── Single notification row ───────────────────────────────────────────────────
 
@@ -31,24 +65,24 @@ function NotificationRow({
   item,
   onRead,
 }: {
-  item: NotificationItem
-  onRead: (id: string) => void
+  item: NotificationItem;
+  onRead: (id: string) => void;
 }) {
-  const navigate = useNavigate()
-  const meta = EVENT_META[item.type] ?? EVENT_META.STATUS_CHANGED
-  const Icon = meta.icon
+  const navigate = useNavigate();
+  const meta = EVENT_META[item.type] ?? EVENT_META.STATUS_CHANGED;
+  const Icon = meta.icon;
 
   const timeAgo = (() => {
     try {
-      return formatDistanceToNow(parseISO(item.timestamp), { addSuffix: true })
+      return formatDistanceToNow(parseISO(item.timestamp), { addSuffix: true });
     } catch {
-      return ''
+      return '';
     }
-  })()
+  })();
 
   function handleClick() {
-    onRead(item.id)
-    if (item.ticket_id) navigate(`/tickets/${item.ticket_id}`)
+    onRead(item.id);
+    if (item.ticket_id) navigate(`/tickets/${item.ticket_id}`);
   }
 
   return (
@@ -56,11 +90,16 @@ function NotificationRow({
       onClick={handleClick}
       className={cn(
         'w-full text-left flex items-start gap-3 px-4 py-3 transition-colors hover:bg-gray-50',
-        !item.read && 'bg-blue-50/60 hover:bg-blue-50',
+        !item.read && 'bg-blue-50/60 hover:bg-blue-50'
       )}
     >
       {/* Icon bubble */}
-      <div className={cn('mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center', meta.bg)}>
+      <div
+        className={cn(
+          'mt-0.5 flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center',
+          meta.bg
+        )}
+      >
         <Icon className={cn('w-3.5 h-3.5', meta.text)} />
       </div>
 
@@ -69,7 +108,9 @@ function NotificationRow({
         <div className="flex items-center justify-between gap-2">
           <span className={cn('text-xs font-semibold', meta.text)}>{meta.label}</span>
           {item.ticket_number && (
-            <span className="text-xs text-gray-400 font-mono flex-shrink-0">{item.ticket_number}</span>
+            <span className="text-xs text-gray-400 font-mono flex-shrink-0">
+              {item.ticket_number}
+            </span>
           )}
         </div>
         <p className="text-sm text-gray-700 mt-0.5 leading-snug line-clamp-2">{item.message}</p>
@@ -77,49 +118,58 @@ function NotificationRow({
       </div>
 
       {/* Unread dot */}
-      {!item.read && (
-        <span className="mt-1.5 flex-shrink-0 w-2 h-2 rounded-full bg-blue-500" />
-      )}
+      {!item.read && <span className="mt-1.5 flex-shrink-0 w-2 h-2 rounded-full bg-blue-500" />}
     </button>
-  )
+  );
 }
 
 // ── Main bell component ───────────────────────────────────────────────────────
 
 export function NotificationBell() {
-  const dispatch    = useAppDispatch()
-  const items       = useAppSelector((s) => s.notifications.items)
-  const connected   = useAppSelector((s) => s.notifications.connected)
-  const unreadCount = items.filter((n) => !n.read).length
+  const dispatch = useAppDispatch();
+  const items = useAppSelector((s) => s.notifications.items);
+  const connected = useAppSelector((s) => s.notifications.connected);
+  const unreadCount = items.filter((n) => !n.read).length;
 
-  const [open, setOpen] = useState(false)
-  const ref = useRef<HTMLDivElement>(null)
+  const [open, setOpen] = useState(false);
+  const ref = useRef<HTMLDivElement>(null);
 
   // Close on outside click
   useEffect(() => {
     function onOutside(e: MouseEvent) {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false)
+      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
     }
-    document.addEventListener('mousedown', onOutside)
-    return () => document.removeEventListener('mousedown', onOutside)
-  }, [])
+    document.addEventListener('mousedown', onOutside);
+    return () => document.removeEventListener('mousedown', onOutside);
+  }, []);
 
   // Mark all read when opening
   function handleOpen() {
-    setOpen((v) => !v)
+    setOpen((v) => !v);
   }
 
-  function handleMarkAllRead() {
-    dispatch(markAllRead())
+  async function handleMarkAllRead() {
+    dispatch(markAllRead());
+    // Sync with backend
+    import('../services/notificationService').then(({ notificationService }) => {
+      notificationService.markAllAsRead();
+    });
   }
 
   function handleClear() {
-    dispatch(clearAll())
+    dispatch(clearAll());
   }
 
-  function handleRead(id: string) {
-    dispatch(markRead(id))
-    setOpen(false)
+  async function handleRead(id: string) {
+    const item = items.find((n) => n.id === id);
+    dispatch(markRead(id));
+    setOpen(false);
+
+    // Sync with backend if it has a real database ID
+    if (item?.notification_id) {
+      const { notificationService } = await import('../services/notificationService');
+      notificationService.markAsRead(item.notification_id);
+    }
   }
 
   return (
@@ -129,9 +179,7 @@ export function NotificationBell() {
         onClick={handleOpen}
         className={cn(
           'relative p-2 rounded-lg transition-colors',
-          open
-            ? 'text-blue-600 bg-blue-50'
-            : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100',
+          open ? 'text-blue-600 bg-blue-50' : 'text-gray-400 hover:text-gray-600 hover:bg-gray-100'
         )}
         aria-label="Notifications"
       >
@@ -149,7 +197,7 @@ export function NotificationBell() {
           className={cn(
             'absolute bottom-1 right-1 w-1.5 h-1.5 rounded-full border border-white',
             connected ? 'bg-green-400' : 'bg-gray-300',
-            unreadCount > 0 && 'hidden',   // hidden when badge is showing
+            unreadCount > 0 && 'hidden' // hidden when badge is showing
           )}
         />
       </button>
@@ -198,12 +246,9 @@ export function NotificationBell() {
               <div className="flex flex-col items-center justify-center py-12 text-gray-400">
                 <Bell className="w-8 h-8 mb-3 opacity-30" />
                 <p className="text-sm">No notifications yet</p>
-               
               </div>
             ) : (
-              items.map((item) => (
-                <NotificationRow key={item.id} item={item} onRead={handleRead} />
-              ))
+              items.map((item) => <NotificationRow key={item.id} item={item} onRead={handleRead} />)
             )}
           </div>
 
@@ -219,5 +264,5 @@ export function NotificationBell() {
         </div>
       )}
     </div>
-  )
+  );
 }
