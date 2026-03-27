@@ -1,66 +1,81 @@
-import React, { useState } from 'react'
-import { Link, useLocation, useNavigate } from 'react-router-dom'
+import React, { useState } from 'react';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, Ticket, PlusCircle, Users, BarChart2,
-  ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
-  Tag, Shield, ClipboardList, ListOrdered, UsersRound, CreditCardIcon, Package
-} from 'lucide-react'
-import { cn } from '@/utils'
-import { useAuth } from '@/features/auth'
-import { Avatar } from '@/components/ui/Avatar'
-import { RoleBadge } from '@/components/ui/Badge'
-import { NotificationBell, useSSENotifications } from '@/features/notifications'
-import { Label } from 'recharts'
+  LayoutDashboard,
+  Ticket,
+  PlusCircle,
+  Users,
+  BarChart2,
+  ChevronDown,
+  Menu,
+  X,
+  LogOut,
+  Zap,
+  AlertTriangle,
+  Tag,
+  Shield,
+  ClipboardList,
+  ListOrdered,
+  UsersRound,
+  CreditCardIcon,
+  Package,
+} from 'lucide-react';
+import { cn } from '@/utils';
+import { useAuth } from '@/features/auth';
+import { Avatar } from '@/components/ui/Avatar';
+import { RoleBadge } from '@/components/ui/Badge';
+import { NotificationBell, useSSENotifications } from '@/features/notifications';
+import { Label } from 'recharts';
 
 const NAV_ITEMS = {
   user: [
     { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { label: 'My Tickets', path: '/tickets',   icon: Ticket },
-    { label: 'Subscription',path:'/subscription', icon:CreditCardIcon}
+    { label: 'My Tickets', path: '/tickets', icon: Ticket },
+    { label: 'Subscription', path: '/subscription', icon: CreditCardIcon },
   ],
   support_agent: [
-    { label: 'Dashboard',      path: '/dashboard',          icon: LayoutDashboard },
-    { label: 'My Tickets',     path: '/tickets',             icon: Ticket },
-    { label: 'Open Queue',     path: '/tickets/queue',       icon: ListOrdered },
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'My Tickets', path: '/tickets', icon: Ticket },
+    { label: 'Open Queue', path: '/tickets/queue', icon: ListOrdered },
   ],
   team_lead: [
-    { label: 'Dashboard',        path: '/dashboard',            icon: LayoutDashboard },
-    { label: 'Team Tickets',     path: '/tickets/team',         icon: UsersRound },
-    ],
-  admin: [
-    { label: 'Dashboard',     path: '/dashboard',         icon: LayoutDashboard },
-    { label: 'All Tickets',   path: '/tickets',           icon: Ticket },
-    { label: 'Teams',         path: '/teams',             icon: UsersRound },
-    { label: 'Users',         path: '/users',             icon: Users },
-    { label: 'Products',      path: '/products',          icon: Package },
-    { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
-    { label: 'Keyword Rules', path: '/keyword-rules',     icon: Tag },
-    { label: 'Email Config',  path: '/email-config',      icon: ClipboardList },
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'Team Tickets', path: '/tickets/team', icon: UsersRound },
   ],
-}
+  admin: [
+    { label: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
+    { label: 'All Tickets', path: '/tickets', icon: Ticket },
+    { label: 'Teams', path: '/teams', icon: UsersRound },
+    { label: 'Users', path: '/users', icon: Users },
+    { label: 'Products', path: '/products', icon: Package },
+    { label: 'SLA Config', path: '/sla-config', icon: Shield },
+    { label: 'Keyword Rules', path: '/keyword-rules', icon: Tag },
+    { label: 'Email Config', path: '/email-config', icon: ClipboardList },
+  ],
+};
 
 function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
-  const location = useLocation()
-  const navigate  = useNavigate()
-  const { user, logout } = useAuth()
-  const role     = user?.role || 'user'
-  const navItems = NAV_ITEMS[role] || NAV_ITEMS.user
+  const location = useLocation();
+  const navigate = useNavigate();
+  const { user, logout } = useAuth();
+  const role = user?.role || 'user';
+  const navItems = NAV_ITEMS[role] || NAV_ITEMS.user;
 
   async function handleLogout() {
-    await logout()
-    navigate('/login')
+    await logout();
+    navigate('/login');
   }
 
   return (
     <>
-      {open && (
-        <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={onClose} />
-      )}
-      <aside className={cn(
-        'fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200',
-        'lg:translate-x-0 lg:static lg:z-auto',
-        open ? 'translate-x-0' : '-translate-x-full'
-      )}>
+      {open && <div className="fixed inset-0 z-30 bg-black/40 lg:hidden" onClick={onClose} />}
+      <aside
+        className={cn(
+          'fixed top-0 left-0 z-40 h-screen w-64 bg-white border-r border-gray-200 flex flex-col transition-transform duration-200',
+          'lg:translate-x-0 lg:static lg:z-auto',
+          open ? 'translate-x-0' : '-translate-x-full'
+        )}
+      >
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
           <div className="flex items-center gap-2.5">
             <div className="w-8 h-8 bg-blue-600 rounded-xl flex items-center justify-center flex-shrink-0">
@@ -74,11 +89,14 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         </div>
 
         <nav className="flex-1 overflow-y-auto px-3 py-4 space-y-0.5">
-          <p className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">Menu</p>
+          <p className="px-3 mb-2 text-xs font-semibold text-gray-400 uppercase tracking-wider">
+            Menu
+          </p>
           {navItems.map((item) => {
-            const Icon   = item.icon
-            const active = location.pathname === item.path ||
-              (item.path !== '/dashboard' && location.pathname.startsWith(item.path))
+            const Icon = item.icon;
+            const active =
+              location.pathname === item.path ||
+              (item.path !== '/dashboard' && location.pathname.startsWith(item.path));
             return (
               <Link
                 key={item.path}
@@ -89,7 +107,7 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
                 <Icon className="w-4 h-4 flex-shrink-0" />
                 {item.label}
               </Link>
-            )
+            );
           })}
         </nav>
 
@@ -113,11 +131,11 @@ function Sidebar({ open, onClose }: { open: boolean; onClose: () => void }) {
         </div>
       </aside>
     </>
-  )
+  );
 }
 
 function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
-  const { user } = useAuth()
+  const { user } = useAuth();
   return (
     <header className="h-14 bg-white border-b border-gray-200 flex items-center justify-between px-4 lg:px-6 sticky top-0 z-20">
       <button
@@ -131,23 +149,21 @@ function Topbar({ onMenuClick }: { onMenuClick: () => void }) {
         <NotificationBell />
       </div>
     </header>
-  )
+  );
 }
 
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
-  const [sidebarOpen, setSidebarOpen] = useState(false)
-  useSSENotifications()   
+  const [sidebarOpen, setSidebarOpen] = useState(false);
+  useSSENotifications();
   return (
     <div className="flex h-screen overflow-hidden bg-gray-50">
       <Sidebar open={sidebarOpen} onClose={() => setSidebarOpen(false)} />
       <div className="flex flex-col flex-1 min-w-0 overflow-hidden">
         <Topbar onMenuClick={() => setSidebarOpen(true)} />
         <main className="flex-1 overflow-y-auto">
-          <div className="max-w-7xl mx-auto px-4 lg:px-6 py-6">
-            {children}
-          </div>
+          <div className="max-w-7xl mx-auto px-4 lg:px-6 py-6">{children}</div>
         </main>
       </div>
     </div>
-  )
+  );
 }

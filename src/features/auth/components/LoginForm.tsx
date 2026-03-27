@@ -1,57 +1,59 @@
-import React, { useState, useEffect } from 'react'
-import { useNavigate } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, Zap } from 'lucide-react'
-import { useAuth } from '../hooks/useAuth'
-import { loginThunk } from '../slices/authSlice'
-import toast from 'react-hot-toast'
+import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, Zap } from 'lucide-react';
+import { useAuth } from '../hooks/useAuth';
+import { loginThunk } from '../slices/authSlice';
+import toast from 'react-hot-toast';
 
 const DEMO_ACCOUNTS = [
   { role: 'Customer', email: 'customer@demo.com', password: 'Demo1234!', color: 'blue' },
   { role: 'Agent', email: 'agent@demo.com', password: 'Demo1234!', color: 'purple' },
   { role: 'Team Lead', email: 'lead@demo.com', password: 'Demo1234!', color: 'orange' },
   { role: 'Admin', email: 'admin@demo.com', password: 'Demo1234!', color: 'red' },
-]
+];
 
 export default function LoginForm() {
-  const navigate = useNavigate()
-  const { login, isLoading, error, isAuthenticated, clearError } = useAuth()
+  const navigate = useNavigate();
+  const { login, isLoading, error, isAuthenticated, clearError } = useAuth();
 
-  const [form, setForm] = useState({ email: '', password: '' })
-  const [showPassword, setShowPassword] = useState(false)
-  const [fieldErrors, setFieldErrors] = useState<Partial<typeof form>>({})
-
-  useEffect(() => {
-    if (isAuthenticated) navigate('/dashboard')
-  }, [isAuthenticated, navigate])
+  const [form, setForm] = useState({ email: '', password: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [fieldErrors, setFieldErrors] = useState<Partial<typeof form>>({});
 
   useEffect(() => {
-    if (error) toast.error(error)
-    return () => { clearError() }
-  }, [error])
+    if (isAuthenticated) navigate('/dashboard');
+  }, [isAuthenticated, navigate]);
+
+  useEffect(() => {
+    if (error) toast.error(error);
+    return () => {
+      clearError();
+    };
+  }, [error]);
 
   function validate() {
-    const errs: Partial<typeof form> = {}
-    if (!form.email.trim()) errs.email = 'Email is required'
-    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Enter a valid email'
-    if (!form.password) errs.password = 'Password is required'
-    else if (form.password.length < 8) errs.password = 'Minimum 8 characters'
-    setFieldErrors(errs)
-    return Object.keys(errs).length === 0
+    const errs: Partial<typeof form> = {};
+    if (!form.email.trim()) errs.email = 'Email is required';
+    else if (!/\S+@\S+\.\S+/.test(form.email)) errs.email = 'Enter a valid email';
+    if (!form.password) errs.password = 'Password is required';
+    else if (form.password.length < 8) errs.password = 'Minimum 8 characters';
+    setFieldErrors(errs);
+    return Object.keys(errs).length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!validate()) return
-    const result = await login(form)
+    e.preventDefault();
+    if (!validate()) return;
+    const result = await login(form);
     if (loginThunk.fulfilled.match(result as any)) {
-      toast.success('Welcome back!')
-      navigate('/dashboard')
+      toast.success('Welcome back!');
+      navigate('/dashboard');
     }
   }
 
   function fillDemo(email: string, password: string) {
-    setForm({ email, password })
-    setFieldErrors({})
+    setForm({ email, password });
+    setFieldErrors({});
   }
 
   return (
@@ -89,9 +91,7 @@ export default function LoginForm() {
 
             {/* Password */}
             <div>
-              <label className="block text-sm font-medium text-gray-700 mb-1.5">
-                Password
-              </label>
+              <label className="block text-sm font-medium text-gray-700 mb-1.5">Password</label>
               <div className="relative">
                 <input
                   type={showPassword ? 'text' : 'password'}
@@ -123,7 +123,11 @@ export default function LoginForm() {
               </div>
             </div>
 
-            <button type="submit" disabled={isLoading} className="btn-primary w-full justify-center py-2.5 text-base">
+            <button
+              type="submit"
+              disabled={isLoading}
+              className="btn-primary w-full justify-center py-2.5 text-base"
+            >
               {isLoading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin" /> Signing in…
@@ -166,5 +170,5 @@ export default function LoginForm() {
         </p>
       </div>
     </div>
-  )
+  );
 }

@@ -1,4 +1,4 @@
-import {ticketingApi} from '@/lib/axios';
+import { ticketingApi } from '@/lib/axios';
 
 export interface SimilarTicket {
   ticket_id: number;
@@ -30,16 +30,13 @@ export const similarityService = {
     minSimilarity: number = 0.3
   ): Promise<SimilaritySearchResponse> {
     try {
-      const response = await ticketingApi.get<SimilaritySearchResponse>(
-        '/api/tickets/similarity',
-        {
-          params: {
-            query,
-            limit,
-            min_similarity: minSimilarity
-          }
-        }
-      );
+      const response = await ticketingApi.get<SimilaritySearchResponse>('/api/tickets/similarity', {
+        params: {
+          query,
+          limit,
+          min_similarity: minSimilarity,
+        },
+      });
       return response.data;
     } catch (error) {
       console.error('Similarity search failed:', error);
@@ -47,7 +44,7 @@ export const similarityService = {
       return {
         similar_tickets: [],
         found_count: 0,
-        min_similarity: minSimilarity
+        min_similarity: minSimilarity,
       };
     }
   },
@@ -62,8 +59,8 @@ export const similarityService = {
   /**
    * Check health of similarity service
    */
-  async healthCheck(): Promise<any> {
-    const response = await ticketingApi.get('/api/tickets/similarity/health');
+  async healthCheck(): Promise<unknown> {
+    const response = await ticketingApi.get<unknown>('/api/tickets/similarity/health');
     return response.data;
-  }
+  },
 };

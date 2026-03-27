@@ -90,8 +90,13 @@
 
 /* SLA pulse animation */
 @keyframes sla-pulse {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.5; }
+  0%,
+  100% {
+    opacity: 1;
+  }
+  50% {
+    opacity: 0.5;
+  }
 }
 
 .sla-breached {
@@ -100,8 +105,12 @@
 
 /* Loading skeleton */
 @keyframes skeleton-loading {
-  0% { background-position: -200% 0; }
-  100% { background-position: 200% 0; }
+  0% {
+    background-position: -200% 0;
+  }
+  100% {
+    background-position: 200% 0;
+  }
 }
 
 .skeleton {
@@ -112,8 +121,14 @@
 
 /* Premium plan glow */
 @keyframes plan-glow {
-  0%, 100% { box-shadow: 0 0 15px rgba(59, 130, 246, 0.1); }
-  50% { box-shadow: 0 0 25px rgba(59, 130, 246, 0.3); border-color: rgba(59, 130, 246, 0.5); }
+  0%,
+  100% {
+    box-shadow: 0 0 15px rgba(59, 130, 246, 0.1);
+  }
+  50% {
+    box-shadow: 0 0 25px rgba(59, 130, 246, 0.3);
+    border-color: rgba(59, 130, 246, 0.5);
+  }
 }
 
 .highlight-pulse {

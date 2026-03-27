@@ -1,49 +1,49 @@
-import React, { useState } from 'react'
-import { useNavigate, useSearchParams } from 'react-router-dom'
-import { Eye, EyeOff, Loader2, Zap, CheckCircle } from 'lucide-react'
-import { authService } from '../services/authService'
-import toast from 'react-hot-toast'
+import React, { useState } from 'react';
+import { useNavigate, useSearchParams } from 'react-router-dom';
+import { Eye, EyeOff, Loader2, Zap, CheckCircle } from 'lucide-react';
+import { authService } from '../services/authService';
+import toast from 'react-hot-toast';
 
 export default function ResetPasswordForm() {
-  const navigate = useNavigate()
-  const [searchParams] = useSearchParams()
-  const token = searchParams.get('token') || ''
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const token = searchParams.get('token') || '';
 
-  const [form, setForm] = useState({ password: '', confirmPassword: '' })
-  const [showPassword, setShowPassword] = useState(false)
-  const [isLoading, setIsLoading] = useState(false)
-  const [success, setSuccess] = useState(false)
-  const [errors, setErrors] = useState<Partial<typeof form>>({})
+  const [form, setForm] = useState({ password: '', confirmPassword: '' });
+  const [showPassword, setShowPassword] = useState(false);
+  const [isLoading, setIsLoading] = useState(false);
+  const [success, setSuccess] = useState(false);
+  const [errors, setErrors] = useState<Partial<typeof form>>({});
 
   function validate() {
-    const errs: Partial<typeof form> = {}
-    if (!form.password) errs.password = 'Password is required'
-    else if (form.password.length < 8) errs.password = 'Minimum 8 characters'
-    if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match'
-    setErrors(errs)
-    return Object.keys(errs).length === 0
+    const errs: Partial<typeof form> = {};
+    if (!form.password) errs.password = 'Password is required';
+    else if (form.password.length < 8) errs.password = 'Minimum 8 characters';
+    if (form.password !== form.confirmPassword) errs.confirmPassword = 'Passwords do not match';
+    setErrors(errs);
+    return Object.keys(errs).length === 0;
   }
 
   async function handleSubmit(e: React.FormEvent) {
-    e.preventDefault()
-    if (!validate()) return
+    e.preventDefault();
+    if (!validate()) return;
 
     if (!token) {
-      toast.error('Invalid reset link. Please request a new one.')
-      return
+      toast.error('Invalid reset link. Please request a new one.');
+      return;
     }
 
-    setIsLoading(true)
+    setIsLoading(true);
     try {
-      await authService.resetPassword(token, form.password)
-      setSuccess(true)
-      toast.success('Password reset successfully!')
-      setTimeout(() => navigate('/login'), 3000)
+      await authService.resetPassword(token, form.password);
+      setSuccess(true);
+      toast.success('Password reset successfully!');
+      setTimeout(() => navigate('/login'), 3000);
     } catch (err: any) {
-      const detail = err.response?.data?.detail || 'Reset failed. The link may have expired.'
-      toast.error(detail)
+      const detail = err.response?.data?.detail || 'Reset failed. The link may have expired.';
+      toast.error(detail);
     } finally {
-      setIsLoading(false)
+      setIsLoading(false);
     }
   }
 
@@ -65,7 +65,7 @@ export default function ResetPasswordForm() {
           </div>
         </div>
       </div>
-    )
+    );
   }
 
   return (
@@ -153,5 +153,5 @@ export default function ResetPasswordForm() {
         </div>
       </div>
     </div>
-  )
+  );
 }

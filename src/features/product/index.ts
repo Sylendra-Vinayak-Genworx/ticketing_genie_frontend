@@ -1,2 +1,2 @@
-export { useProducts } from './hooks/useProducts'
-export { productService } from './service/productService'
+export { useProducts } from './hooks/useProducts';
+export { productService } from './service/productService';

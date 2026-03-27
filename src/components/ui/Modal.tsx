@@ -1,15 +1,15 @@
-import React, { useEffect } from 'react'
-import { X } from 'lucide-react'
-import { cn } from '@/utils'
+import React, { useEffect } from 'react';
+import { X } from 'lucide-react';
+import { cn } from '@/utils';
 
 interface ModalProps {
-  open: boolean
-  onClose: () => void
-  title: string
-  children: React.ReactNode
-  footer?: React.ReactNode
-  size?: 'sm' | 'md' | 'lg' | 'xl'
-  className?: string
+  open: boolean;
+  onClose: () => void;
+  title: string;
+  children: React.ReactNode;
+  footer?: React.ReactNode;
+  size?: 'sm' | 'md' | 'lg' | 'xl';
+  className?: string;
 }
 
 const SIZE_CLASSES = {
@@ -17,19 +17,29 @@ const SIZE_CLASSES = {
   md: 'max-w-md',
   lg: 'max-w-lg',
   xl: 'max-w-2xl',
-}
+};
 
-export function Modal({ open, onClose, title, children, footer, size = 'md', className }: ModalProps) {
+export function Modal({
+  open,
+  onClose,
+  title,
+  children,
+  footer,
+  size = 'md',
+  className,
+}: ModalProps) {
   useEffect(() => {
     if (open) {
-      document.body.style.overflow = 'hidden'
+      document.body.style.overflow = 'hidden';
     } else {
-      document.body.style.overflow = ''
+      document.body.style.overflow = '';
     }
-    return () => { document.body.style.overflow = '' }
-  }, [open])
+    return () => {
+      document.body.style.overflow = '';
+    };
+  }, [open]);
 
-  if (!open) return null
+  if (!open) return null;
 
   return (
     <div
@@ -74,20 +84,20 @@ export function Modal({ open, onClose, title, children, footer, size = 'md', cla
         )}
       </div>
     </div>
-  )
+  );
 }
 
 // ─── Confirm Modal ────────────────────────────────────────────────────────────
 
 interface ConfirmModalProps {
-  open: boolean
-  onClose: () => void
-  onConfirm: () => void
-  title: string
-  message: string
-  confirmLabel?: string
-  isLoading?: boolean
-  variant?: 'danger' | 'warning' | 'info'
+  open: boolean;
+  onClose: () => void;
+  onConfirm: () => void;
+  title: string;
+  message: string;
+  confirmLabel?: string;
+  isLoading?: boolean;
+  variant?: 'danger' | 'warning' | 'info';
 }
 
 export function ConfirmModal({
@@ -108,7 +118,9 @@ export function ConfirmModal({
       size="sm"
       footer={
         <>
-          <button onClick={onClose} className="btn-secondary" disabled={isLoading}>Cancel</button>
+          <button onClick={onClose} className="btn-secondary" disabled={isLoading}>
+            Cancel
+          </button>
           <button
             onClick={onConfirm}
             disabled={isLoading}
@@ -121,5 +133,5 @@ export function ConfirmModal({
     >
       <p className="text-sm text-gray-600">{message}</p>
     </Modal>
-  )
+  );
 }

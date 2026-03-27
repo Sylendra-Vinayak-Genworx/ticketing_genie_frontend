@@ -1,78 +1,133 @@
-import React, { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import React, { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import {
-  UsersRound, RefreshCw, Search, AlertTriangle,
-  Clock, CheckCircle2, UserCheck, UserPlus, User,
-} from 'lucide-react'
-import { useTeamTickets } from '@/features/tickets/hooks/useTeamTickets'
-import { PageHeader } from '@/components/common/PageHeader'
-import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge'
-import { SLATimer } from '@/features/sla/components/SLATimer'
-import { Pagination } from '@/components/common/Pagination'
-import { SkeletonRow, EmptyState } from '@/components/common/LoadingSpinner'
-import { AssignModal } from '@/features/tickets/components/AssignModal'
-import { formatRelative } from '@/utils'
-import type { TicketBrief, TicketStatus, Severity, Priority } from '@/types'
-import { TICKET_STATUSES, SEVERITIES, PRIORITIES } from '@/config/constants'
+  UsersRound,
+  RefreshCw,
+  Search,
+  AlertTriangle,
+  Clock,
+  CheckCircle2,
+  UserCheck,
+  UserPlus,
+  User,
+} from 'lucide-react';
+import { useTeamTickets } from '@/features/tickets/hooks/useTeamTickets';
+import { PageHeader } from '@/components/common/PageHeader';
+import { StatusBadge, PriorityBadge, SeverityBadge } from '@/components/ui/Badge';
+import { SLATimer } from '@/features/sla/components/SLATimer';
+import { Pagination } from '@/components/common/Pagination';
+import { SkeletonRow, EmptyState } from '@/components/common/LoadingSpinner';
+import { AssignModal } from '@/features/tickets/components/AssignModal';
+import { formatRelative } from '@/utils';
+import type { TicketBrief, TicketStatus, Severity, Priority } from '@/types';
+import { TICKET_STATUSES, SEVERITIES, PRIORITIES } from '@/config/constants';
 
-const PAGE_SIZE = 20
+const PAGE_SIZE = 20;
 
 // Unclaimed = no assignee AND status is ACKNOWLEDGED (waiting to be claimed).
 // OPEN tickets always have an assignee — ACKNOWLEDGED→OPEN only happens on assignment.
 function isUnclaimed(t: TicketBrief): boolean {
-  return !t.assignee_id && t.status === 'ACKNOWLEDGED'
+  return !t.assignee_id && t.status === 'ACKNOWLEDGED';
 }
 
-function StatCard({ icon, label, value, accent, active, onClick }: {
-  icon: React.ReactNode; label: string; value: number; accent: string
-  active?: boolean; onClick?: () => void
+function StatCard({
+  icon,
+  label,
+  value,
+  accent,
+  active,
+  onClick,
+}: {
+  icon: React.ReactNode;
+  label: string;
+  value: number;
+  accent: string;
+  active?: boolean;
+  onClick?: () => void;
 }) {
   return (
-    <button type="button" onClick={onClick}
+    <button
+      type="button"
+      onClick={onClick}
       className={`card p-4 flex items-center gap-3 border-l-4 ${accent} w-full text-left transition-all ${
         active ? 'ring-2 ring-violet-400 shadow-md' : 'hover:shadow-sm'
-      } ${onClick ? 'cursor-pointer' : 'cursor-default'}`}>
+      } ${onClick ? 'cursor-pointer' : 'cursor-default'}`}
+    >
       <div className="opacity-60">{icon}</div>
       <div>
         <p className="text-2xl font-bold text-gray-900 leading-none">{value}</p>
         <p className="text-xs text-gray-500 mt-0.5">{label}</p>
       </div>
-      {active && <span className="ml-auto text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">Filtered</span>}
+      {active && (
+        <span className="ml-auto text-xs font-medium text-violet-600 bg-violet-50 px-2 py-0.5 rounded-full">
+          Filtered
+        </span>
+      )}
     </button>
-  )
+  );
 }
 
-function GroupDivider({ label, count, className }: { label: string; count: number; className: string }) {
+function GroupDivider({
+  label,
+  count,
+  className,
+}: {
+  label: string;
+  count: number;
+  className: string;
+}) {
   return (
     <tr>
-      <td colSpan={9} className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-y ${className}`}>
+      <td
+        colSpan={9}
+        className={`px-4 py-2 text-xs font-bold uppercase tracking-wider border-y ${className}`}
+      >
         {label}
         <span className="ml-2 font-normal opacity-60">({count})</span>
       </td>
     </tr>
-  )
+  );
 }
 
 export default function TeamTicketsPage() {
-  const navigate = useNavigate()
-  const { tickets, total, page, setPage, isLoading, nameCache, teamAgents, filters, setFilters, refetch } = useTeamTickets()
-  const [assignTarget, setAssignTarget] = useState<TicketBrief | null>(null)
+  const navigate = useNavigate();
+  const {
+    tickets,
+    total,
+    page,
+    setPage,
+    isLoading,
+    nameCache,
+    teamAgents,
+    filters,
+    setFilters,
+    refetch,
+  } = useTeamTickets();
+  const [assignTarget, setAssignTarget] = useState<TicketBrief | null>(null);
 
   // ── Stats ─────────────────────────────────────────────────────────────────
-  const activeCount    = tickets.filter(t => ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'ACKNOWLEDGED'].includes(t.status)).length
-  const breachedCount  = tickets.filter(t => t.is_breached).length
-  const unclaimedCount = tickets.filter(isUnclaimed).length
-  const resolvedCount  = tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length
+  const activeCount = tickets.filter((t) =>
+    ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'ACKNOWLEDGED'].includes(t.status)
+  ).length;
+  const breachedCount = tickets.filter((t) => t.is_breached).length;
+  const unclaimedCount = tickets.filter(isUnclaimed).length;
+  const resolvedCount = tickets.filter((t) => ['RESOLVED', 'CLOSED'].includes(t.status)).length;
 
   // ── Grouped sections (only when no quick filter / status filter) ──────────
-  const isFiltered = filters.quickFilter !== 'all' || !!filters.status || !!filters.severity || !!filters.priority || !!filters.search || !!filters.assigneeId
-  const escalatedGroup = tickets.filter(t => t.is_escalated)
-  const unclaimedGroup = tickets.filter(t => isUnclaimed(t) && !t.is_escalated)
-  const assignedGroup  = tickets.filter(t => t.assignee_id && !t.is_escalated)
+  const isFiltered =
+    filters.quickFilter !== 'all' ||
+    !!filters.status ||
+    !!filters.severity ||
+    !!filters.priority ||
+    !!filters.search ||
+    !!filters.assigneeId;
+  const escalatedGroup = tickets.filter((t) => t.is_escalated);
+  const unclaimedGroup = tickets.filter((t) => isUnclaimed(t) && !t.is_escalated);
+  const assignedGroup = tickets.filter((t) => t.assignee_id && !t.is_escalated);
 
   function toggleQuickFilter(qf: 'unassigned' | 'escalated') {
-    setFilters(f => ({ ...f, quickFilter: f.quickFilter === qf ? 'all' : qf }))
-    setPage(1)
+    setFilters((f) => ({ ...f, quickFilter: f.quickFilter === qf ? 'all' : qf }));
+    setPage(1);
   }
 
   // ── Single ticket row ─────────────────────────────────────────────────────
@@ -84,19 +139,41 @@ export default function TeamTicketsPage() {
         }`}
       >
         <td className="px-4 py-3 font-mono text-xs font-semibold whitespace-nowrap">
-          <button className="text-violet-600 hover:underline" onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}>
+          <button
+            className="text-violet-600 hover:underline"
+            onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}
+          >
             {ticket.ticket_number}
           </button>
-          {ticket.is_escalated && <span className="ml-1.5 text-orange-500" title="Escalated">▲</span>}
-          {ticket.is_breached  && <span className="ml-1 text-red-500"      title="SLA Breached">●</span>}
+          {ticket.is_escalated && (
+            <span className="ml-1.5 text-orange-500" title="Escalated">
+              ▲
+            </span>
+          )}
+          {ticket.is_breached && (
+            <span className="ml-1 text-red-500" title="SLA Breached">
+              ●
+            </span>
+          )}
         </td>
-        <td className="px-4 py-3 max-w-[200px] cursor-pointer" onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}>
+        <td
+          className="px-4 py-3 max-w-[200px] cursor-pointer"
+          onClick={() => navigate(`/tickets/${ticket.ticket_id}`)}
+        >
           <p className="font-medium text-gray-900 truncate">{ticket.title}</p>
-          <p className="text-xs text-gray-400 mt-0.5">{ticket.product} · {ticket.environment}</p>
+          <p className="text-xs text-gray-400 mt-0.5">
+            {ticket.product} · {ticket.environment}
+          </p>
         </td>
-        <td className="px-4 py-3"><StatusBadge   status={ticket.status}     /></td>
-        <td className="px-4 py-3"><PriorityBadge priority={ticket.priority} /></td>
-        <td className="px-4 py-3"><SeverityBadge severity={ticket.severity} /></td>
+        <td className="px-4 py-3">
+          <StatusBadge status={ticket.status} />
+        </td>
+        <td className="px-4 py-3">
+          <PriorityBadge priority={ticket.priority} />
+        </td>
+        <td className="px-4 py-3">
+          <SeverityBadge severity={ticket.severity} />
+        </td>
         <td className="px-4 py-3">
           <SLATimer
             responseDueAt={ticket.response_due_at}
@@ -110,32 +187,60 @@ export default function TeamTicketsPage() {
           />
         </td>
         <td className="px-4 py-3 text-xs">
-          {ticket.assignee_id
-            ? <span className="font-medium text-gray-700">{nameCache[ticket.assignee_id] ?? `${ticket.assignee_id.slice(0, 8)}…`}</span>
-            : <span className="inline-flex items-center gap-1 text-amber-600 font-medium"><UserCheck className="w-3 h-3" />Unclaimed</span>}
+          {ticket.assignee_id ? (
+            <span className="font-medium text-gray-700">
+              {nameCache[ticket.assignee_id] ?? `${ticket.assignee_id.slice(0, 8)}…`}
+            </span>
+          ) : (
+            <span className="inline-flex items-center gap-1 text-amber-600 font-medium">
+              <UserCheck className="w-3 h-3" />
+              Unclaimed
+            </span>
+          )}
         </td>
-        <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">{formatRelative(ticket.updated_at)}</td>
+        <td className="px-4 py-3 text-xs text-gray-400 whitespace-nowrap">
+          {formatRelative(ticket.updated_at)}
+        </td>
         <td className="px-4 py-3">
           {ticket.assignee_id ? (
             <></>
           ) : (
-            <button onClick={e => { e.stopPropagation(); setAssignTarget(ticket) }}
-              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors whitespace-nowrap">
+            <button
+              onClick={(e) => {
+                e.stopPropagation();
+                setAssignTarget(ticket);
+              }}
+              className="inline-flex items-center gap-1 px-2.5 py-1 text-xs font-medium rounded-md bg-amber-50 text-amber-700 hover:bg-amber-100 border border-amber-200 transition-colors whitespace-nowrap"
+            >
               <UserPlus className="w-3.5 h-3.5" /> Assign
             </button>
           )}
         </td>
       </tr>
-    )
+    );
   }
 
   // ── Table body — grouped or flat ──────────────────────────────────────────
   function TableBody() {
-    if (isLoading) return <>{Array.from({ length: 8 }).map((_, i) => <SkeletonRow key={i} cols={9} />)}</>
-    if (tickets.length === 0) return null
+    if (isLoading)
+      return (
+        <>
+          {Array.from({ length: 8 }).map((_, i) => (
+            <SkeletonRow key={i} cols={9} />
+          ))}
+        </>
+      );
+    if (tickets.length === 0) return null;
 
     // Filtered view — flat list, no grouping
-    if (isFiltered) return <>{tickets.map(t => <TicketRow key={t.ticket_id} ticket={t} />)}</>
+    if (isFiltered)
+      return (
+        <>
+          {tickets.map((t) => (
+            <TicketRow key={t.ticket_id} ticket={t} />
+          ))}
+        </>
+      );
 
     // Default view — three clear sections
     return (
@@ -147,7 +252,9 @@ export default function TeamTicketsPage() {
               count={escalatedGroup.length}
               className="bg-orange-50 text-orange-700 border-orange-200"
             />
-            {escalatedGroup.map(t => <TicketRow key={t.ticket_id} ticket={t} />)}
+            {escalatedGroup.map((t) => (
+              <TicketRow key={t.ticket_id} ticket={t} />
+            ))}
           </>
         )}
 
@@ -158,7 +265,9 @@ export default function TeamTicketsPage() {
               count={unclaimedGroup.length}
               className="bg-amber-50 text-amber-700 border-amber-200"
             />
-            {unclaimedGroup.map(t => <TicketRow key={t.ticket_id} ticket={t} />)}
+            {unclaimedGroup.map((t) => (
+              <TicketRow key={t.ticket_id} ticket={t} />
+            ))}
           </>
         )}
 
@@ -169,11 +278,13 @@ export default function TeamTicketsPage() {
               count={assignedGroup.length}
               className="bg-blue-50 text-blue-700 border-blue-100"
             />
-            {assignedGroup.map(t => <TicketRow key={t.ticket_id} ticket={t} />)}
+            {assignedGroup.map((t) => (
+              <TicketRow key={t.ticket_id} ticket={t} />
+            ))}
           </>
         )}
       </>
-    )
+    );
   }
 
   return (
@@ -181,105 +292,179 @@ export default function TeamTicketsPage() {
       <PageHeader
         title="Team Tickets"
         subtitle={`${total} ticket${total !== 1 ? 's' : ''} owned by your team`}
-        actions={<button onClick={refetch} className="btn-ghost p-2" title="Refresh"><RefreshCw className="w-4 h-4" /></button>}
+        actions={
+          <button onClick={refetch} className="btn-ghost p-2" title="Refresh">
+            <RefreshCw className="w-4 h-4" />
+          </button>
+        }
       />
 
       <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-violet-50 border border-violet-200 text-violet-800 text-sm">
         <UsersRound className="w-4 h-4 mt-0.5 shrink-0 text-violet-500" />
         <span>
-          Tickets routed to <strong>your team's queue</strong>.
-          Unclaimed tickets (status: Acknowledged) need an agent to self-claim.
-          Escalated tickets require immediate attention.
+          Tickets routed to <strong>your team's queue</strong>. Unclaimed tickets (status:
+          Acknowledged) need an agent to self-claim. Escalated tickets require immediate attention.
         </span>
       </div>
 
       {!isLoading && (
         <div className="grid grid-cols-4 gap-4">
-          <StatCard icon={<Clock className="w-5 h-5 text-blue-500" />}
-            label="Active" value={activeCount} accent="border-blue-400" />
-          <StatCard icon={<AlertTriangle className="w-5 h-5 text-orange-500" />}
-            label="SLA Breached" value={breachedCount} accent="border-orange-400" />
-          <StatCard icon={<UserCheck className="w-5 h-5 text-yellow-500" />}
-            label="Unclaimed" value={unclaimedCount} accent="border-yellow-400"
+          <StatCard
+            icon={<Clock className="w-5 h-5 text-blue-500" />}
+            label="Active"
+            value={activeCount}
+            accent="border-blue-400"
+          />
+          <StatCard
+            icon={<AlertTriangle className="w-5 h-5 text-orange-500" />}
+            label="SLA Breached"
+            value={breachedCount}
+            accent="border-orange-400"
+          />
+          <StatCard
+            icon={<UserCheck className="w-5 h-5 text-yellow-500" />}
+            label="Unclaimed"
+            value={unclaimedCount}
+            accent="border-yellow-400"
             active={filters.quickFilter === 'unassigned'}
-            onClick={() => toggleQuickFilter('unassigned')} />
-          <StatCard icon={<CheckCircle2 className="w-5 h-5 text-green-500" />}
-            label="Resolved" value={resolvedCount} accent="border-green-400" />
+            onClick={() => toggleQuickFilter('unassigned')}
+          />
+          <StatCard
+            icon={<CheckCircle2 className="w-5 h-5 text-green-500" />}
+            label="Resolved"
+            value={resolvedCount}
+            accent="border-green-400"
+          />
         </div>
       )}
 
       <div className="card p-4 space-y-3">
         <div className="flex items-center gap-2 flex-wrap">
-          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide mr-1">Quick filter:</span>
-          <button onClick={() => toggleQuickFilter('unassigned')}
+          <span className="text-xs font-medium text-gray-500 uppercase tracking-wide mr-1">
+            Quick filter:
+          </span>
+          <button
+            onClick={() => toggleQuickFilter('unassigned')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
               filters.quickFilter === 'unassigned'
                 ? 'bg-amber-100 text-amber-700 border-amber-300 shadow-sm'
                 : 'bg-white text-gray-600 border-gray-200 hover:border-amber-300 hover:text-amber-600'
-            }`}>
+            }`}
+          >
             <UserPlus className="w-3.5 h-3.5" /> Unclaimed
           </button>
-          <button onClick={() => toggleQuickFilter('escalated')}
+          <button
+            onClick={() => toggleQuickFilter('escalated')}
             className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border transition-all ${
               filters.quickFilter === 'escalated'
                 ? 'bg-orange-100 text-orange-700 border-orange-300 shadow-sm'
                 : 'bg-white text-gray-600 border-gray-200 hover:border-orange-300 hover:text-orange-600'
-            }`}>
+            }`}
+          >
             <AlertTriangle className="w-3.5 h-3.5" /> Escalated
           </button>
           {filters.quickFilter !== 'all' && (
-            <button onClick={() => { setFilters(f => ({ ...f, quickFilter: 'all' })); setPage(1) }}
-              className="text-xs text-gray-400 hover:text-gray-600 underline ml-1">
+            <button
+              onClick={() => {
+                setFilters((f) => ({ ...f, quickFilter: 'all' }));
+                setPage(1);
+              }}
+              className="text-xs text-gray-400 hover:text-gray-600 underline ml-1"
+            >
               Clear filter
             </button>
           )}
           {filters.assigneeId && (
             <span className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-medium border bg-violet-100 text-violet-700 border-violet-300 shadow-sm">
               <User className="w-3.5 h-3.5" />
-              {teamAgents.find(a => a.id === filters.assigneeId)?.full_name
-                || teamAgents.find(a => a.id === filters.assigneeId)?.email
-                || 'Agent'}
+              {teamAgents.find((a) => a.id === filters.assigneeId)?.full_name ||
+                teamAgents.find((a) => a.id === filters.assigneeId)?.email ||
+                'Agent'}
               <button
-                onClick={() => { setFilters(f => ({ ...f, assigneeId: '' })); setPage(1) }}
+                onClick={() => {
+                  setFilters((f) => ({ ...f, assigneeId: '' }));
+                  setPage(1);
+                }}
                 className="ml-1 hover:text-violet-900 font-bold leading-none"
                 title="Clear assignee filter"
-              >×</button>
+              >
+                ×
+              </button>
             </span>
           )}
         </div>
         <div className="flex flex-wrap gap-3">
           <div className="relative flex-1 min-w-[220px]">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
-            <input type="text" placeholder="Search by title or ticket #…" value={filters.search}
-              onChange={e => setFilters(f => ({ ...f, search: e.target.value }))} className="input-field pl-9" />
+            <input
+              type="text"
+              placeholder="Search by title or ticket #…"
+              value={filters.search}
+              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
+              className="input-field pl-9"
+            />
           </div>
-          <select value={filters.status}
-            onChange={e => { setFilters(f => ({ ...f, status: e.target.value as TicketStatus | '', quickFilter: 'all' })); setPage(1) }}
+          <select
+            value={filters.status}
+            onChange={(e) => {
+              setFilters((f) => ({
+                ...f,
+                status: e.target.value as TicketStatus | '',
+                quickFilter: 'all',
+              }));
+              setPage(1);
+            }}
             className="input-field w-auto min-w-[140px]"
-            disabled={filters.quickFilter !== 'all'}>
+            disabled={filters.quickFilter !== 'all'}
+          >
             <option value="">All Statuses</option>
-            {TICKET_STATUSES.map(s => <option key={s} value={s}>{s.replace('_', ' ')}</option>)}
+            {TICKET_STATUSES.map((s) => (
+              <option key={s} value={s}>
+                {s.replace('_', ' ')}
+              </option>
+            ))}
           </select>
-          <select value={filters.severity}
-            onChange={e => { setFilters(f => ({ ...f, severity: e.target.value as Severity | '' })); setPage(1) }}
-            className="input-field w-auto min-w-[130px]">
+          <select
+            value={filters.severity}
+            onChange={(e) => {
+              setFilters((f) => ({ ...f, severity: e.target.value as Severity | '' }));
+              setPage(1);
+            }}
+            className="input-field w-auto min-w-[130px]"
+          >
             <option value="">All Severities</option>
-            {SEVERITIES.map(s => <option key={s} value={s}>{s}</option>)}
+            {SEVERITIES.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
           </select>
-          <select value={filters.priority}
-            onChange={e => { setFilters(f => ({ ...f, priority: e.target.value as Priority | '' })); setPage(1) }}
-            className="input-field w-auto min-w-[120px]">
+          <select
+            value={filters.priority}
+            onChange={(e) => {
+              setFilters((f) => ({ ...f, priority: e.target.value as Priority | '' }));
+              setPage(1);
+            }}
+            className="input-field w-auto min-w-[120px]"
+          >
             <option value="">All Priorities</option>
-            {PRIORITIES.map(p => <option key={p} value={p}>{p}</option>)}
+            {PRIORITIES.map((p) => (
+              <option key={p} value={p}>
+                {p}
+              </option>
+            ))}
           </select>
           <select
             value={filters.assigneeId}
-            onChange={e => { setFilters(f => ({ ...f, assigneeId: e.target.value })); setPage(1) }}
+            onChange={(e) => {
+              setFilters((f) => ({ ...f, assigneeId: e.target.value }));
+              setPage(1);
+            }}
             className="input-field w-auto min-w-[160px]"
             disabled={filters.quickFilter === 'unassigned'}
           >
             <option value="">All Agents</option>
-            {teamAgents.map(agent => (
+            {teamAgents.map((agent) => (
               <option key={agent.id} value={agent.id}>
                 {agent.full_name || agent.email}
               </option>
@@ -293,8 +478,23 @@ export default function TeamTicketsPage() {
           <table className="w-full text-sm">
             <thead>
               <tr className="bg-violet-50 border-b border-violet-100">
-                {['Ticket #', 'Title', 'Status', 'Priority', 'Severity', 'SLA', 'Assignee', 'Updated', 'Action'].map(h => (
-                  <th key={h} className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide">{h}</th>
+                {[
+                  'Ticket #',
+                  'Title',
+                  'Status',
+                  'Priority',
+                  'Severity',
+                  'SLA',
+                  'Assignee',
+                  'Updated',
+                  'Action',
+                ].map((h) => (
+                  <th
+                    key={h}
+                    className="text-left px-4 py-3 text-xs font-semibold text-gray-500 uppercase tracking-wide"
+                  >
+                    {h}
+                  </th>
                 ))}
               </tr>
             </thead>
@@ -318,7 +518,12 @@ export default function TeamTicketsPage() {
 
         {!isLoading && tickets.length > 0 && (
           <div className="px-4 py-3 border-t border-gray-100">
-            <Pagination total={total} page={page} pageSize={PAGE_SIZE} onPageChange={p => setPage(p)} />
+            <Pagination
+              total={total}
+              page={page}
+              pageSize={PAGE_SIZE}
+              onPageChange={(p) => setPage(p)}
+            />
           </div>
         )}
       </div>
@@ -327,8 +532,11 @@ export default function TeamTicketsPage() {
         ticket={assignTarget}
         currentAssigneeName={assignTarget?.assignee_id ? nameCache[assignTarget.assignee_id] : null}
         onClose={() => setAssignTarget(null)}
-        onAssigned={() => { setAssignTarget(null); refetch() }}
+        onAssigned={() => {
+          setAssignTarget(null);
+          refetch();
+        }}
       />
     </div>
-  )
+  );
 }

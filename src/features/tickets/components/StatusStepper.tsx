@@ -1,30 +1,70 @@
-import React from 'react'
+import React from 'react';
 import {
-  CheckCircle2, Circle, Clock, User2, Bot, AlertTriangle,
-  ArrowRightLeft, UserCheck, MessageSquare, TrendingUp, PlusCircle,
-} from 'lucide-react'
-import { cn } from '@/utils'
-import type { TicketEvent } from '@/types'
-import { formatRelative } from '@/utils'
-import { isUUID, resolveValue, deduplicateEvents } from '@/features/tickets/utils/eventHelpers'
+  CheckCircle2,
+  Circle,
+  Clock,
+  User2,
+  Bot,
+  AlertTriangle,
+  ArrowRightLeft,
+  UserCheck,
+  MessageSquare,
+  TrendingUp,
+  PlusCircle,
+} from 'lucide-react';
+import { cn } from '@/utils';
+import type { TicketEvent } from '@/types';
+import { formatRelative } from '@/utils';
+import { isUUID, resolveValue, deduplicateEvents } from '@/features/tickets/utils/eventHelpers';
 
 interface StatusStepperProps {
-  events: TicketEvent[]
-  userNames?: Record<string, string>
+  events: TicketEvent[];
+  userNames?: Record<string, string>;
 }
 
-const EVENT_META: Record<string, {
-  label: string; icon: React.ElementType; color: string; bg: string
-}> = {
-  CREATED:        { label: 'Ticket Created',  icon: PlusCircle,     color: 'text-blue-600',   bg: 'bg-blue-100'   },
-  STATUS_CHANGED: { label: 'Status Changed',  icon: ArrowRightLeft, color: 'text-indigo-600', bg: 'bg-indigo-100' },
-  ASSIGNED:       { label: 'Assigned to',     icon: UserCheck,      color: 'text-purple-600', bg: 'bg-purple-100' },
-  SLA_BREACHED:   { label: 'SLA Breached',    icon: AlertTriangle,  color: 'text-red-600',    bg: 'bg-red-100'    },
-  ESCALATED:      { label: 'Escalated',       icon: TrendingUp,     color: 'text-orange-600', bg: 'bg-orange-100' },
-  COMMENT_ADDED:  { label: 'Comment Added',   icon: MessageSquare,  color: 'text-gray-600',   bg: 'bg-gray-100'   },
-  RESOLVED:       { label: 'Resolved',        icon: CheckCircle2,   color: 'text-green-600',  bg: 'bg-green-100'  },
-  CLOSED:         { label: 'Closed',          icon: CheckCircle2,   color: 'text-gray-600',   bg: 'bg-gray-100'   },
-}
+const EVENT_META: Record<
+  string,
+  {
+    label: string;
+    icon: React.ElementType;
+    color: string;
+    bg: string;
+  }
+> = {
+  CREATED: { label: 'Ticket Created', icon: PlusCircle, color: 'text-blue-600', bg: 'bg-blue-100' },
+  STATUS_CHANGED: {
+    label: 'Status Changed',
+    icon: ArrowRightLeft,
+    color: 'text-indigo-600',
+    bg: 'bg-indigo-100',
+  },
+  ASSIGNED: {
+    label: 'Assigned to',
+    icon: UserCheck,
+    color: 'text-purple-600',
+    bg: 'bg-purple-100',
+  },
+  SLA_BREACHED: {
+    label: 'SLA Breached',
+    icon: AlertTriangle,
+    color: 'text-red-600',
+    bg: 'bg-red-100',
+  },
+  ESCALATED: {
+    label: 'Escalated',
+    icon: TrendingUp,
+    color: 'text-orange-600',
+    bg: 'bg-orange-100',
+  },
+  COMMENT_ADDED: {
+    label: 'Comment Added',
+    icon: MessageSquare,
+    color: 'text-gray-600',
+    bg: 'bg-gray-100',
+  },
+  RESOLVED: { label: 'Resolved', icon: CheckCircle2, color: 'text-green-600', bg: 'bg-green-100' },
+  CLOSED: { label: 'Closed', icon: CheckCircle2, color: 'text-gray-600', bg: 'bg-gray-100' },
+};
 
 function actorLabel(event: TicketEvent, userNames: Record<string, string>): React.ReactNode {
   if (!event.triggered_by_user_id) {
@@ -32,48 +72,63 @@ function actorLabel(event: TicketEvent, userNames: Record<string, string>): Reac
       <span className="inline-flex items-center gap-1 text-gray-400">
         <Bot className="w-3 h-3" /> System
       </span>
-    )
+    );
   }
-  const name = userNames[event.triggered_by_user_id] || event.triggered_by_user_id.slice(0, 8) + '…'
+  const name =
+    userNames[event.triggered_by_user_id] || event.triggered_by_user_id.slice(0, 8) + '…';
   return (
     <span className="inline-flex items-center gap-1 text-gray-500">
       <User2 className="w-3 h-3" /> {name}
     </span>
-  )
+  );
 }
 
 export function StatusStepper({ events, userNames = {} }: StatusStepperProps) {
-  const deduplicated = deduplicateEvents(events)
+  const deduplicated = deduplicateEvents(events);
 
   if (deduplicated.length === 0) {
-    return <div className="py-8 text-center text-gray-400 text-sm">No timeline events yet.</div>
+    return <div className="py-8 text-center text-gray-400 text-sm">No timeline events yet.</div>;
   }
 
   return (
     <div className="flow-root">
       <ul className="-mb-8">
         {deduplicated.map((event, i) => {
-          const meta   = EVENT_META[event.event_type] || { label: event.event_type, icon: Circle, color: 'text-gray-600', bg: 'bg-gray-100' }
-          const Icon   = meta.icon
-          const isLast = i === deduplicated.length - 1
+          const meta = EVENT_META[event.event_type] || {
+            label: event.event_type,
+            icon: Circle,
+            color: 'text-gray-600',
+            bg: 'bg-gray-100',
+          };
+          const Icon = meta.icon;
+          const isLast = i === deduplicated.length - 1;
 
           // Resolve old/new values — UUIDs become names, statuses become readable labels
-          const resolvedOld = resolveValue(event.old_value, userNames)
-          const resolvedNew = resolveValue(event.new_value, userNames)
+          const resolvedOld = resolveValue(event.old_value, userNames);
+          const resolvedNew = resolveValue(event.new_value, userNames);
 
           // For ASSIGNED events with no old_value, show just the assignee name
-          const showTransition = !!(event.old_value && event.new_value)
-          const showNewOnly    = !event.old_value && event.new_value && event.event_type !== 'CREATED'
+          const showTransition = !!(event.old_value && event.new_value);
+          const showNewOnly = !event.old_value && event.new_value && event.event_type !== 'CREATED';
 
           return (
             <li key={event.event_id}>
               <div className="relative pb-8">
                 {!isLast && (
-                  <span className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-100" aria-hidden="true" />
+                  <span
+                    className="absolute left-4 top-4 -ml-px h-full w-0.5 bg-gray-100"
+                    aria-hidden="true"
+                  />
                 )}
                 <div className="relative flex items-start space-x-3">
                   {/* Icon bubble */}
-                  <div className={cn('flex h-8 w-8 items-center justify-center rounded-full ring-4 ring-white flex-shrink-0', meta.bg, meta.color)}>
+                  <div
+                    className={cn(
+                      'flex h-8 w-8 items-center justify-center rounded-full ring-4 ring-white flex-shrink-0',
+                      meta.bg,
+                      meta.color
+                    )}
+                  >
                     <Icon className="w-4 h-4" />
                   </div>
 
@@ -103,24 +158,22 @@ export function StatusStepper({ events, userNames = {} }: StatusStepperProps) {
                       </span>
                     </div>
 
-                    <p className="text-xs mt-0.5">
-                      by {actorLabel(event, userNames)}
-                    </p>
+                    <p className="text-xs mt-0.5">by {actorLabel(event, userNames)}</p>
 
                     {(event as any).reason &&
                       (event as any).reason !== 'Ticket created' &&
                       (event as any).reason !== 'Automatic acknowledgement on creation' && (
-                      <p className="text-xs text-gray-400 mt-0.5 italic">
-                        "{(event as any).reason}"
-                      </p>
-                    )}
+                        <p className="text-xs text-gray-400 mt-0.5 italic">
+                          "{(event as any).reason}"
+                        </p>
+                      )}
                   </div>
                 </div>
               </div>
             </li>
-          )
+          );
         })}
       </ul>
     </div>
-  )
+  );
 }

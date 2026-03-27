@@ -1,16 +1,16 @@
-import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit'
-import { ticketService } from '../services/ticketService'
-import type { TicketBrief, PaginatedResponse, TicketFilterParams } from '@/types'
+import { createSlice, createAsyncThunk, PayloadAction } from '@reduxjs/toolkit';
+import { ticketService } from '../services/ticketService';
+import type { TicketBrief, PaginatedResponse, TicketFilterParams } from '@/types';
 
 // ─── State ────────────────────────────────────────────────────────────────────
 
 interface EscalatedTicketsState {
-  list: TicketBrief[]
-  total: number
-  page: number
-  pageSize: number
-  isLoading: boolean
-  error: string | null
+  list: TicketBrief[];
+  total: number;
+  page: number;
+  pageSize: number;
+  isLoading: boolean;
+  error: string | null;
 }
 
 const initialState: EscalatedTicketsState = {
@@ -20,7 +20,7 @@ const initialState: EscalatedTicketsState = {
   pageSize: 20,
   isLoading: false,
   error: null,
-}
+};
 
 // ─── Thunk ────────────────────────────────────────────────────────────────────
 
@@ -29,12 +29,13 @@ export const fetchEscalatedTickets = createAsyncThunk(
   'escalatedTickets/fetchAll',
   async (params: Omit<TicketFilterParams, 'is_escalated'>, { rejectWithValue }) => {
     try {
-      return await ticketService.getAllTickets({ ...params, is_escalated: true })
-    } catch (err: any) {
-      return rejectWithValue(err.response?.data?.detail || 'Failed to load escalated tickets')
+      return await ticketService.getAllTickets({ ...params, is_escalated: true });
+    } catch (err: unknown) {
+      const error = err as { response?: { data?: { detail?: string } } };
+      return rejectWithValue(error.response?.data?.detail || 'Failed to load escalated tickets');
     }
   }
-)
+);
 
 // ─── Slice ────────────────────────────────────────────────────────────────────
 
@@ -43,31 +44,31 @@ const escalatedTicketsSlice = createSlice({
   initialState,
   reducers: {
     setEscalatedPage(state, action: PayloadAction<number>) {
-      state.page = action.payload
+      state.page = action.payload;
     },
   },
   extraReducers: (builder) => {
     builder
       .addCase(fetchEscalatedTickets.pending, (state) => {
-        state.isLoading = true
-        state.error = null
+        state.isLoading = true;
+        state.error = null;
       })
       .addCase(
         fetchEscalatedTickets.fulfilled,
         (state, action: PayloadAction<PaginatedResponse<TicketBrief>>) => {
-          state.isLoading = false
-          state.list = action.payload.items
-          state.total = action.payload.total
-          state.page = action.payload.page
-          state.pageSize = action.payload.page_size
+          state.isLoading = false;
+          state.list = action.payload.items;
+          state.total = action.payload.total;
+          state.page = action.payload.page;
+          state.pageSize = action.payload.page_size;
         }
       )
       .addCase(fetchEscalatedTickets.rejected, (state, action) => {
-        state.isLoading = false
-        state.error = action.payload as string
-      })
+        state.isLoading = false;
+        state.error = action.payload as string;
+      });
   },
-})
+});
 
-export const { setEscalatedPage } = escalatedTicketsSlice.actions
-export default escalatedTicketsSlice.reducer
+export const { setEscalatedPage } = escalatedTicketsSlice.actions;
+export default escalatedTicketsSlice.reducer;

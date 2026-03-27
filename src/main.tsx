@@ -1,17 +1,20 @@
-import React from 'react'
-import ReactDOM from 'react-dom/client'
-import { BrowserRouter } from 'react-router-dom'
-import { Provider } from 'react-redux'
-import { Toaster } from 'react-hot-toast'
-import { store } from './app/store'
-import AppRoutes from './app/routes'
-import './styles/globals.css'
+import React from 'react';
+import ReactDOM from 'react-dom/client';
+import { BrowserRouter } from 'react-router-dom';
+import { Provider } from 'react-redux';
+import { Toaster } from 'react-hot-toast';
+import { store } from './app/store';
+import AppRoutes from './app/routes';
+import './styles/globals.css';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
 
 ReactDOM.createRoot(document.getElementById('root')!).render(
   <React.StrictMode>
     <Provider store={store}>
       <BrowserRouter>
-        <AppRoutes />
+        <ErrorBoundary>
+          <AppRoutes />
+        </ErrorBoundary>
         <Toaster
           position="top-right"
           toastOptions={{
@@ -34,4 +37,4 @@ ReactDOM.createRoot(document.getElementById('root')!).render(
       </BrowserRouter>
     </Provider>
   </React.StrictMode>
-)
+);
