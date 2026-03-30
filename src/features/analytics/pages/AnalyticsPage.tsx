@@ -30,12 +30,28 @@ export default function AnalyticsPage() {
   )
 
   const { summary, distribution, sla_compliance } = data
+  const dataScope = data.data_scope ?? 'GLOBAL'
 
   const { statusData, severityData, priorityData } = useAnalyticsChartData(distribution)
 
   return (
     <div className="space-y-6">
-      <PageHeader title="Analytics Dashboard" subtitle="Overview of your support operations" />
+      <PageHeader
+        title="Analytics Dashboard"
+        subtitle="Overview of your support operations"
+        actions={
+          <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+            dataScope === 'GLOBAL'
+              ? 'bg-violet-100 text-violet-700 border border-violet-200'
+              : 'bg-sky-100 text-sky-700 border border-sky-200'
+          }`}>
+            <span className={`w-1.5 h-1.5 rounded-full ${
+              dataScope === 'GLOBAL' ? 'bg-violet-500' : 'bg-sky-500'
+            }`} />
+            {dataScope === 'GLOBAL' ? 'System-wide' : 'Your Team'}
+          </span>
+        }
+      />
 
       <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
         <MetricCard label="Total Tickets"  value={summary.total_tickets}      color="text-blue-600" />

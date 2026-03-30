@@ -35,7 +35,15 @@ export interface AgentPerformance {
   avg_resolution_minutes: number
 }
 
+export interface TeamComparison {
+  team_name: string
+  total_tickets: number
+  resolved_tickets: number
+  breached_tickets: number
+}
+
 export interface DashboardData {
+  data_scope: 'GLOBAL' | 'TEAM'
   summary: DashboardSummary
   distribution: {
     by_status: DistributionItem[]
@@ -45,6 +53,7 @@ export interface DashboardData {
   }
   sla_compliance: SLACompliance
   top_agents: AgentPerformance[]
+  team_comparison: TeamComparison[]
 }
 
 export interface CustomerReport {

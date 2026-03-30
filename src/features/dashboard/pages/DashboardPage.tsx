@@ -125,9 +125,11 @@ export default function DashboardPage() {
   // loadSearchTickets is now handled by useDashboardSearch hook
 
   // ── Derived values ───────────────────────────────────────────────────────
-  const summary   = analytics?.summary
-  const sla       = analytics?.sla_compliance
-  const topAgents = analytics?.top_agents ?? []
+  const summary        = analytics?.summary
+  const sla            = analytics?.sla_compliance
+  const topAgents      = analytics?.top_agents ?? []
+  const teamComparison = analytics?.team_comparison ?? []
+  const dataScope      = analytics?.data_scope ?? 'GLOBAL'
 
   const { counts, recentTickets, chartData } = useDashboardMetrics({
     list,
@@ -150,16 +152,34 @@ export default function DashboardPage() {
     <div className="space-y-6">
       <PageHeader
         title={`Welcome back${user?.email ? ', ' + user.email.split('@')[0] : ''} 👋`}
-        subtitle={isPowerUser ? 'Live analytics, search & reporting — all in one place' : "Here's what's happening with your tickets today"}
-        actions={isPowerUser ? (
-          <button onClick={() => { fetchedForRole.current = null; fetchAll({ page: 1, page_size: 10 }); refetchAnalytics() }} className="btn-ghost p-2" title="Refresh all">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        ) : (
-          <button onClick={() => { fetchedForRole.current = null; fetchMy({ page: 1, page_size: MY_TICKETS_PAGE_SIZE }) }} className="btn-ghost p-2" title="Refresh">
-            <RefreshCw className="w-4 h-4" />
-          </button>
-        )}
+        subtitle={isPowerUser
+          ? `Live analytics, search & reporting — all in one place`
+          : "Here's what's happening with your tickets today"}
+        actions={
+          <div className="flex items-center gap-3">
+            {isPowerUser && analytics && (
+              <span className={`inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold ${
+                dataScope === 'GLOBAL'
+                  ? 'bg-violet-100 text-violet-700 border border-violet-200'
+                  : 'bg-sky-100 text-sky-700 border border-sky-200'
+              }`}>
+                <span className={`w-1.5 h-1.5 rounded-full ${
+                  dataScope === 'GLOBAL' ? 'bg-violet-500' : 'bg-sky-500'
+                }`} />
+                {dataScope === 'GLOBAL' ? 'System-wide' : 'Your Team'}
+              </span>
+            )}
+            {isPowerUser ? (
+              <button onClick={() => { fetchedForRole.current = null; fetchAll({ page: 1, page_size: 10 }); refetchAnalytics() }} className="btn-ghost p-2" title="Refresh all">
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            ) : (
+              <button onClick={() => { fetchedForRole.current = null; fetchMy({ page: 1, page_size: MY_TICKETS_PAGE_SIZE }) }} className="btn-ghost p-2" title="Refresh">
+                <RefreshCw className="w-4 h-4" />
+              </button>
+            )}
+          </div>
+        }
       />
 
       {isPowerUser ? (
@@ -214,8 +234,7 @@ export default function DashboardPage() {
                   <KpiCard label="Open"            value={summary.open_tickets}        icon={Clock}         color="text-yellow-600" bg="bg-yellow-50" onClick={() => navigate('/tickets')} />
                   <KpiCard label="In Progress"     value={summary.in_progress_tickets} icon={Activity}      color="text-indigo-600" bg="bg-indigo-50" />
                   <KpiCard label="Resolved"        value={summary.resolved_tickets}    icon={CheckCircle}   color="text-green-600"  bg="bg-green-50"  />
-                  <KpiCard label="SLA Breached"    value={summary.breached_tickets}    icon={ShieldAlert}   color="text-red-600"    bg="bg-red-50"
-                    sub={sla ? `${formatPercent(100 - sla.resolution_compliance_pct)} breach rate` : undefined} />
+                  <KpiCard label="SLA Breached"    value={summary.breached_tickets}    icon={ShieldAlert}   color="text-red-600"    bg="bg-red-50"/>
                   <KpiCard label="Escalated"       value={summary.escalated_tickets}   icon={AlertTriangle} color="text-orange-600" bg="bg-orange-50" onClick={() => navigate('/tickets/escalated')} />
                   <KpiCard label="On Hold"         value={summary.on_hold_tickets}     icon={Clock}         color="text-purple-600" bg="bg-purple-50" />
                   <KpiCard label="Closed"          value={summary.closed_tickets}      icon={CheckCircle}   color="text-gray-600"   bg="bg-gray-100"  />
@@ -330,6 +349,8 @@ export default function DashboardPage() {
                       </div>
                     </SectionCard>
                   )}
+
+                 
                 </>
               )}
 

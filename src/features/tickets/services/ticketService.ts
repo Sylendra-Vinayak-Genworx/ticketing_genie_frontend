@@ -60,6 +60,11 @@ export const ticketService = {
     return res.data
   },
 
+  async getTeamKpis(params: Record<string, string>): Promise<{ active_tickets: number, breached_tickets: number, unclaimed_tickets: number, resolved_tickets: number }> {
+    const res = await ticketingApi.get<{ active_tickets: number, breached_tickets: number, unclaimed_tickets: number, resolved_tickets: number }>('/tickets/kpis/team', { params })
+    return res.data
+  },
+
   async getTicketById(id: number): Promise<Ticket> {
     const res = await ticketingApi.get<Ticket>(`/tickets/${id}`)
     return res.data

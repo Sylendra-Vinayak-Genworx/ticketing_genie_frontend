@@ -6,7 +6,8 @@ import {
 } from 'lucide-react'
 import { cn } from '@/utils'
 import { useAppDispatch, useAppSelector } from '@/hooks'
-import { markAllRead, markRead, clearAll } from '../slices/notificationsSlice'
+import { clearAll } from '../slices/notificationsSlice'
+import { useNotificationActions } from '../hooks/useNotificationActions'
 import type { NotificationItem, NotificationEventType } from '../types'
 import { formatDistanceToNow, parseISO } from 'date-fns'
 
@@ -92,6 +93,8 @@ export function NotificationBell() {
   const connected   = useAppSelector((s) => s.notifications.connected)
   const unreadCount = items.filter((n) => !n.read).length
 
+  const { handleMarkAllRead, handleMarkRead } = useNotificationActions()
+
   const [open, setOpen] = useState(false)
   const ref = useRef<HTMLDivElement>(null)
 
@@ -109,8 +112,8 @@ export function NotificationBell() {
     setOpen((v) => !v)
   }
 
-  function handleMarkAllRead() {
-    dispatch(markAllRead())
+  function onMarkAllRead() {
+    handleMarkAllRead()
   }
 
   function handleClear() {
@@ -118,7 +121,7 @@ export function NotificationBell() {
   }
 
   function handleRead(id: string) {
-    dispatch(markRead(id))
+    handleMarkRead(id)
     setOpen(false)
   }
 
@@ -174,7 +177,7 @@ export function NotificationBell() {
             <div className="flex items-center gap-1">
               {unreadCount > 0 && (
                 <button
-                  onClick={handleMarkAllRead}
+                  onClick={onMarkAllRead}
                   className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-700 px-2 py-1 rounded hover:bg-blue-50 transition-colors"
                 >
                   <CheckCheck className="w-3.5 h-3.5" />

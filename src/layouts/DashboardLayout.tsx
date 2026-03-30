@@ -3,7 +3,7 @@ import { Link, useLocation, useNavigate } from 'react-router-dom'
 import {
   LayoutDashboard, Ticket, PlusCircle, Users, BarChart2,
   ChevronDown, Menu, X, LogOut, Zap, AlertTriangle,
-  Tag, Shield, ClipboardList, ListOrdered, UsersRound, CreditCardIcon, Package
+  Tag, Shield, ClipboardList, ListOrdered, UsersRound, CreditCardIcon, Package, SlidersHorizontal
 } from 'lucide-react'
 import { cn } from '@/utils'
 import { useAuth } from '@/features/auth'
@@ -35,6 +35,7 @@ const NAV_ITEMS = {
     { label: 'Products',      path: '/products',          icon: Package },
     { label: 'SLA Config',    path: '/sla-config',        icon: Shield },
     { label: 'Keyword Rules', path: '/keyword-rules',     icon: Tag },
+    { label: 'Priority Rules',path: '/priority-rules',    icon: SlidersHorizontal },
     { label: 'Email Config',  path: '/email-config',      icon: ClipboardList },
   ],
 }

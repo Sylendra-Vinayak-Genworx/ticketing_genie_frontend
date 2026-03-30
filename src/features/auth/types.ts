@@ -10,6 +10,7 @@ export interface User {
   is_active: boolean
   is_verified: boolean
   lead_id: string | null
+  team_id: string | null
   customer_tier_id: number | null
   created_at: string
 }

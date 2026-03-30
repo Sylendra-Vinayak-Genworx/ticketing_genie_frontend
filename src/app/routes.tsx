@@ -27,6 +27,7 @@ const TeamsPage            = lazy(() => import('@/features/users/pages/TeamsPage
 const ProductsPage         = lazy(() => import('@/features/product/pages/ProductsPage'))
 const SubscriptionPage   =lazy(() =>import('@/features/subscription/pages/SubscriptionPage'))
 const EmailConfigPage      = lazy(() => import('@/features/email-config/pages/EmailConfigPage'))
+const PriorityRulesPage    = lazy(() => import('@/features/priority-rules/pages/PriorityRulesPage'))
 
 function PrivateRoute({ children }: { children: React.ReactNode }) {
   const { isAuthenticated, isLoading } = useAuth()
@@ -134,6 +135,9 @@ export default function AppRoutes() {
                     } />
                     <Route path="/email-config" element={
                       <RoleRoute roles={['admin']}><EmailConfigPage /></RoleRoute>
+                    } />
+                    <Route path="/priority-rules" element={
+                      <RoleRoute roles={['admin']}><PriorityRulesPage /></RoleRoute>
                     } />
                     <Route path="*" element={<Navigate to="/dashboard" replace />} />
                   </Routes>

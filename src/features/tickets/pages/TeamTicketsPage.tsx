@@ -55,14 +55,14 @@ function GroupDivider({ label, count, className }: { label: string; count: numbe
 
 export default function TeamTicketsPage() {
   const navigate = useNavigate()
-  const { tickets, total, page, setPage, isLoading, nameCache, teamAgents, filters, setFilters, refetch } = useTeamTickets()
+  const { tickets, total, page, setPage, isLoading, nameCache, teamAgents, teamKpis, filters, setFilters, refetch } = useTeamTickets()
   const [assignTarget, setAssignTarget] = useState<TicketBrief | null>(null)
 
   // ── Stats ─────────────────────────────────────────────────────────────────
-  const activeCount    = tickets.filter(t => ['OPEN', 'IN_PROGRESS', 'ON_HOLD', 'ACKNOWLEDGED'].includes(t.status)).length
-  const breachedCount  = tickets.filter(t => t.is_breached).length
-  const unclaimedCount = tickets.filter(isUnclaimed).length
-  const resolvedCount  = tickets.filter(t => ['RESOLVED', 'CLOSED'].includes(t.status)).length
+  const activeCount    = teamKpis.active_tickets
+  const breachedCount  = teamKpis.breached_tickets
+  const unclaimedCount = teamKpis.unclaimed_tickets
+  const resolvedCount  = teamKpis.resolved_tickets
 
   // ── Grouped sections (only when no quick filter / status filter) ──────────
   const isFiltered = filters.quickFilter !== 'all' || !!filters.status || !!filters.severity || !!filters.priority || !!filters.search || !!filters.assigneeId
@@ -187,9 +187,8 @@ export default function TeamTicketsPage() {
       <div className="flex items-start gap-3 px-4 py-3 rounded-lg bg-violet-50 border border-violet-200 text-violet-800 text-sm">
         <UsersRound className="w-4 h-4 mt-0.5 shrink-0 text-violet-500" />
         <span>
-          Tickets routed to <strong>your team's queue</strong>.
-          Unclaimed tickets (status: Acknowledged) need an agent to self-claim.
-          Escalated tickets require immediate attention.
+          Unclaimed tickets (status: Acknowledged) need an lead to manually assign.
+          Escalated tickets require immediate attention from the lead.
         </span>
       </div>
 

@@ -17,7 +17,9 @@ const PAGE_SIZE = 20
 
 export function useTeamTickets() {
   const { user } = useAuth()
-  const teamId = (user as any)?.team_id as string | undefined
+  
+  // A team_lead's team is inherently identified by their own user ID if they don't have a distinct team_id
+  const teamId = user?.team_id || (user?.role === 'team_lead' ? user.id : undefined)
   const leadId = user?.id
 
   const [tickets, setTickets]     = useState<TicketBrief[]>([])
@@ -26,6 +28,7 @@ export function useTeamTickets() {
   const [isLoading, setIsLoading] = useState(false)
   const [nameCache, setNameCache] = useState<Record<string, string>>({})
   const [teamAgents, setTeamAgents] = useState<User[]>([])
+  const [teamKpis, setTeamKpis] = useState({ active_tickets: 0, breached_tickets: 0, unclaimed_tickets: 0, resolved_tickets: 0 })
   const [filters, setFilters]     = useState<TeamTicketFilters>({
     status: '', severity: '', priority: '', search: '', quickFilter: 'all', assigneeId: '',
   })
@@ -70,9 +73,20 @@ export function useTeamTickets() {
         if (filters.status) params.status = filters.status
       }
 
-      const res = await ticketService.getAllTickets(params)
+      // Fetch KPIs matching the team and assignee filter (ignoring table layout filters)
+      const kpiParams: Record<string, string> = {
+        ...(teamId && { team_id: teamId }),
+        ...(filters.assigneeId && { assignee_id: filters.assigneeId }),
+      }
+
+      const [res, kpiRes] = await Promise.all([
+        ticketService.getAllTickets(params),
+        ticketService.getTeamKpis(kpiParams)
+      ])
+
       setTickets(res.items)
       setTotal(res.total)
+      setTeamKpis(kpiRes)
 
       // Resolve assignee display names
       const unknownIds = [...new Set(
@@ -111,6 +125,7 @@ export function useTeamTickets() {
     total, page, setPage, isLoading,
     nameCache,
     teamAgents,
+    teamKpis,
     filters, setFilters,
     refetch: load,
   }

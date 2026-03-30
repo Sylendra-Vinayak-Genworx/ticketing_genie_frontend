@@ -79,7 +79,7 @@ export type {
 
 export type {
   DashboardSummary, DistributionItem, SLACompliance,
-  AgentPerformance, DashboardData, CustomerReport,
+  AgentPerformance, DashboardData, CustomerReport, TeamComparison,
 } from '@/features/analytics/types'
 
 export type {

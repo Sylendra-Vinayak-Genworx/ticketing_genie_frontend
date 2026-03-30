@@ -155,7 +155,7 @@ export default function CreateTicketPage() {
           {/* Area of Concern */}
           <div>
             <label htmlFor="area_of_concern" className="block text-sm font-medium text-gray-700 mb-1">
-              Issue Type
+              Issue Type<span className="text-red-500">*</span>
             </label>
             <select
               id="area_of_concern"
@@ -164,7 +164,7 @@ export default function CreateTicketPage() {
               disabled={areasLoading}
               className="w-full px-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-blue-500 disabled:bg-gray-100"
             >
-              <option value="">Select an issue type (optional)</option>
+              <option value="">Select an issue type </option>
               {areas.map(area => (
                 <option key={area.area_id} value={area.area_id}>
                   {area.name}
